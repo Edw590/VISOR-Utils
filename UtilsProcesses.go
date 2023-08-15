@@ -2,6 +2,7 @@ package Utils
 
 import (
 	"os"
+	"runtime"
 	"syscall"
 )
 
@@ -27,6 +28,10 @@ type _Processes_s struct {
 func isPidRunningPROCESSES(pid int) bool {
 	process, err := os.FindProcess(pid)
 	if nil == err {
+		if runtime.GOOS == "windows" {
+			return true
+		}
+
 		err = process.Signal(syscall.Signal(0))
 
 		return nil == err
