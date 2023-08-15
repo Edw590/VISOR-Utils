@@ -100,7 +100,7 @@ type Multipart struct {
 const RAND_STR_LEN int = 10
 
 const TO_SEND_REL_FOLDER string = "to_send/"
-const _EMAIL_MODELS_FOLDER string = "models/"
+const _EMAIL_MODELS_FOLDER string = "email_models/"
 
 const _TEMP_EML_FILE string = "msg_temp.eml"
 

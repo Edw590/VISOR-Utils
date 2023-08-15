@@ -48,19 +48,18 @@ type _Modules_s struct {
 }
 //////////////////////////////////////////////////////
 
-// _VISOR_DIR is the path to the main directory of VISOR.
-const _VISOR_DIR string = "/srv/dev-disk-by-label-MP4DADi/LEGION/"
-// _TEMP_DIR is the main directory of the temporary files.
-const _TEMP_DIR string = _VISOR_DIR + "temp/"
-// _DATA_DIR is the main directory of the data files.
-const _DATA_DIR string = _VISOR_DIR + "data/"
+// _TEMP_DIR is the full path to the main directory of the temporary files.
+const _TEMP_DIR string = PersonalConsts.VISOR_DIR + "temp/"
+// _DATA_DIR is the full path to the main directory of the data files.
+const _DATA_DIR string = PersonalConsts.VISOR_DIR + "data/"
+// _DATA_DIR is the full path to the main directory of the modules.
+const _MOD_DIR string = PersonalConsts.VISOR_DIR + "Modules/"
 
-// _MOD_FOLDER_PREFFIX is the preffix of the folders of the modules.
+// _MOD_FOLDER_PREFFIX is the preffix of the modules' folders.
 const _MOD_FOLDER_PREFFIX string = "MOD_"
 
 // _MOD_MAIN_INFO_JSON is the name of the file containing the main module information.
 const _MOD_MAIN_INFO_JSON string = "mod_main_info.json"
-
 // _MOD_INFO_JSON is the name of the file containing custom module information.
 const _MOD_INFO_JSON string = "mod_info.json"
 
@@ -289,7 +288,7 @@ getModDirMODULES gets the full path to the directory of a module.
   - the full path to the directory of the module
 */
 func getModDirMODULES(mod_num int) GPath {
-	return pathFILESDIRS(_VISOR_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return pathFILESDIRS(_MOD_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
