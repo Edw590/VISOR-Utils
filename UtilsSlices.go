@@ -133,7 +133,7 @@ func CopyOuterSLICES[T any](slice T) T {
 	var new_slice reflect.Value = reflect.MakeSlice(slice_value.Type(), slice_value.Len(), slice_value.Cap())
 	reflect.Copy(new_slice, slice_value)
 
-	return new_slice.Interface()
+	return new_slice.Interface().(T)
 }
 
 func CopyFullSLICES[T any](dest T, src T) bool {

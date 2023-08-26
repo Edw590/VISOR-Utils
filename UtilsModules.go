@@ -205,12 +205,14 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 
 	fmt.Println()
 	fmt.Println("---------")
+
 	if errors {
 		fmt.Println("Exiting with ERRORS the module \"" + mod_name + "\" (number " + strconv.Itoa(mod_num) + ")...")
 		fmt.Println("\\\\------------------------------------------//")
 
 		os.Exit(_MOD_GEN_ERROR_CODE)
 	}
+
 	fmt.Println("Exiting normally the module \"" + mod_name + "\" (number " + strconv.Itoa(mod_num) + ")...")
 	fmt.Println("\\\\------------------------------------------//")
 }
