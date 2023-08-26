@@ -27,25 +27,17 @@ import (
 	"syscall"
 )
 
-//////////////////////////////////////////////////////
+/*
+IsPidRunningPROCESSES checks if a process with the given PID is running.
 
-//var UProcesses _Processes_s
-type _Processes_s struct {
-	/*
-		IsPidRunning checks if a process with the given PID is running.
+-----------------------------------------------------------
 
-		-----------------------------------------------------------
+– Params:
+  - pid – the PID to check
 
-		– Params:
-		  - pid – the PID to check
-
-		– Returns:
-		  - true if the process is running, false otherwise
-	*/
-	IsPidRunning func(pid int) bool
-}
-//////////////////////////////////////////////////////
-
+– Returns:
+  - true if the process is running, false otherwise
+*/
 func IsPidRunningPROCESSES(pid int) bool {
 	if pid < 0 {
 		return false

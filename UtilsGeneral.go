@@ -35,90 +35,6 @@ import (
 	"github.com/ztrue/tracerr"
 )
 
-//////////////////////////////////////////////////////
-
-//var UGeneral _General_s
-type _General_s struct {
-	/*
-		RandString generates a random string with uppercase and lowercase letters of the given length.
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - letters_num – the length of the string to generate
-
-		– Returns:
-		  - the generated string
-	*/
-	RandString func(letters_num int) string
-	/*
-		FindAllIndexes finds all the indexes of a substring in a string.
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - s – the string to search in
-		  - substr – the substring to search for
-
-		– Returns:
-		  - the indexes of the substring in the string
-	*/
-	FindAllIndexes func(s string, substr string) []int
-	/*
-		GetFullErrorMsg gets the full error message from an error, including its stacktrace.
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - err – the error to get the full message from
-
-		– Returns:
-		  - the full error message
-	*/
-	GetFullErrorMsg func(err any) string
-	/*
-		PanicGENERAL panics with a custom string as the error.
-
-		This function *never* returns.
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - err – the string to panic with
-	*/
-	PanicGENERAL func(err string)
-	/*
-		ToJson converts the given data to a JSON string and indents it.
-
-		All the needed fields of the struct must be exported like with json.Marshal().
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - v – the data to convert to Json. Check the json.Marshal function for more info (used directly here).
-
-		– Returns:
-		  - true if the file was written successfully, false otherwise
-	*/
-	ToJson func(v any) *string
-	/*
-		FromJson minifies and parses the given JSON data.
-
-		All the needed fields of the struct must be exported like with json.Marshal().
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - json_str – the JSON string to parse
-		  - parsed_data – a pointer of where to write the parsed data to
-
-		– Returns:
-		  - true if the data was parsed correctly, false otherwise
-	*/
-	FromJson func(json_data []byte, parsed_data any) bool
-}
-//////////////////////////////////////////////////////
-
 ///////////////////////////
 // Took from https://stackoverflow.com/a/31832326/8228163, by https://stackoverflow.com/users/1705598/icza.
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -129,6 +45,17 @@ const (
 )
 var src = rand.NewSource(time.Now().UnixNano())
 
+/*
+RandStringGENERAL generates a random string with uppercase and lowercase letters of the given length.
+
+-----------------------------------------------------------
+
+– Params:
+  - letters_num – the length of the string to generate
+
+– Returns:
+  - the generated string
+*/
 func RandStringGENERAL(letters_num int) string {
 	// Original function name: RandStringBytesMaskImprSrcUnsafe
 	b := make([]byte, letters_num)
@@ -147,9 +74,20 @@ func RandStringGENERAL(letters_num int) string {
 
 	return *(*string)(unsafe.Pointer(&b))
 }
-
 ///////////////////////////
 
+/*
+FindAllIndexesGENERAL finds all the indexes of a substring in a string.
+
+-----------------------------------------------------------
+
+– Params:
+  - s – the string to search in
+  - substr – the substring to search for
+
+– Returns:
+  - the indexes of the substring in the string
+*/
 func FindAllIndexesGENERAL(s string, substr string) []int {
 	var indexes []int = nil
 	var chars_processed int = 0
@@ -167,14 +105,48 @@ func FindAllIndexesGENERAL(s string, substr string) []int {
 	return indexes
 }
 
+/*
+GetFullErrorMsgGENERAL gets the full error message from an error, including its stacktrace.
+
+-----------------------------------------------------------
+
+– Params:
+  - err – the error to get the full message from
+
+– Returns:
+  - the full error message
+*/
 func GetFullErrorMsgGENERAL(err any) string {
 	return tracerr.SprintSource(tracerr.Wrap(err.(error)), 0)
 }
 
+/*
+PanicGENERAL panics with a custom string as the error.
+
+This function *never* returns.
+
+-----------------------------------------------------------
+
+– Params:
+  - err – the string to panic with
+*/
 func PanicGENERAL(err string) {
 	panic(errors.New(err))
 }
 
+/*
+ToJsonGENERAL converts the given data to a JSON string and indents it.
+
+All the needed fields of the struct must be exported like with json.Marshal().
+
+-----------------------------------------------------------
+
+– Params:
+  - v – the data to convert to Json. Check the json.Marshal function for more info (used directly here).
+
+– Returns:
+  - true if the file was written successfully, false otherwise
+*/
 func ToJsonGENERAL(v any) *string {
 	json_data, err := json.Marshal(v)
 	if nil != err {
@@ -191,6 +163,20 @@ func ToJsonGENERAL(v any) *string {
 	return &json_str
 }
 
+/*
+FromJsonGENERAL minifies and parses the given JSON data.
+
+All the needed fields of the struct must be exported like with json.Marshal().
+
+-----------------------------------------------------------
+
+– Params:
+  - json_str – the JSON string to parse
+  - parsed_data – a pointer of where to write the parsed data to
+
+– Returns:
+  - true if the data was parsed correctly, false otherwise
+*/
 func FromJsonGENERAL(json_data []byte, parsed_data any) bool {
 	var json_final []byte = nil
 	var json_min, err = jsmin.Minify(json_data)

@@ -28,29 +28,6 @@ import (
 	"strings"
 )
 
-//////////////////////////////////////////////////////
-
-//var UShell _Shell_s
-type _Shell_s struct {
-	/*
-		ExecCmd executes a command in the shell and returns the stdout and stderr.
-
-		On Windows, the command is executed in cmd.exe; on Linux, it's executed in bash.
-
-		-----------------------------------------------------------
-
-		– Params:
-		  - command – the command to execute
-
-		– Returns:
-		  - the StdOutErrCmd struct containing the stdout and stderr of the command. Note that their string versions have all
-		    line endings replaced with "\n".
-		  - the error returned by the command
-	*/
-	ExecCmd func(command string) (StdOutErrCmd, error)
-}
-//////////////////////////////////////////////////////
-
 // StdOutErrCmd is a struct containing the stdout and stderr of a command.
 type StdOutErrCmd struct {
 	// Stdout_str is the stdout of the command as a string.
@@ -63,6 +40,21 @@ type StdOutErrCmd struct {
 	Stderr *bytes.Buffer
 }
 
+/*
+ExecCmdSHELL executes a command in the shell and returns the stdout and stderr.
+
+On Windows, the command is executed in cmd.exe; on Linux, it's executed in bash.
+
+-----------------------------------------------------------
+
+– Params:
+  - command – the command to execute
+
+– Returns:
+  - the StdOutErrCmd struct containing the stdout and stderr of the command. Note that their string versions have all
+    line endings replaced with "\n".
+  - the error returned by the command
+*/
 func ExecCmdSHELL(command string) (StdOutErrCmd, error) {
 	var commands []string = nil
 	if "windows" == runtime.GOOS {
