@@ -1,3 +1,24 @@
+/*******************************************************************************
+ * Copyright 2023-2023 Edw590
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ ******************************************************************************/
+
 package Utils
 
 import (
@@ -16,17 +37,17 @@ import (
 
 //////////////////////////////////////////////////////
 
-var UGeneral _General_s
+//var UGeneral _General_s
 type _General_s struct {
 	/*
 		RandString generates a random string with uppercase and lowercase letters of the given length.
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - letters_num – the length of the string to generate
 
-		> Returns:
+		– Returns:
 		  - the generated string
 	*/
 	RandString func(letters_num int) string
@@ -35,11 +56,11 @@ type _General_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - s – the string to search in
 		  - substr – the substring to search for
 
-		> Returns:
+		– Returns:
 		  - the indexes of the substring in the string
 	*/
 	FindAllIndexes func(s string, substr string) []int
@@ -48,10 +69,10 @@ type _General_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - err – the error to get the full message from
 
-		> Returns:
+		– Returns:
 		  - the full error message
 	*/
 	GetFullErrorMsg func(err any) string
@@ -62,32 +83,36 @@ type _General_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - err – the string to panic with
 	*/
 	PanicGENERAL func(err string)
 	/*
 		ToJson converts the given data to a JSON string and indents it.
 
+		All the needed fields of the struct must be exported like with json.Marshal().
+
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - v – the data to convert to Json. Check the json.Marshal function for more info (used directly here).
 
-		> Returns:
+		– Returns:
 		  - true if the file was written successfully, false otherwise
 	*/
 	ToJson func(v any) *string
 	/*
 		FromJson minifies and parses the given JSON data.
 
+		All the needed fields of the struct must be exported like with json.Marshal().
+
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - json_str – the JSON string to parse
 		  - parsed_data – a pointer of where to write the parsed data to
 
-		> Returns:
+		– Returns:
 		  - true if the data was parsed correctly, false otherwise
 	*/
 	FromJson func(json_data []byte, parsed_data any) bool
@@ -104,7 +129,7 @@ const (
 )
 var src = rand.NewSource(time.Now().UnixNano())
 
-func randStringGENERAL(letters_num int) string {
+func RandStringGENERAL(letters_num int) string {
 	// Original function name: RandStringBytesMaskImprSrcUnsafe
 	b := make([]byte, letters_num)
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
@@ -125,7 +150,7 @@ func randStringGENERAL(letters_num int) string {
 
 ///////////////////////////
 
-func findAllIndexesGENERAL(s string, substr string) []int {
+func FindAllIndexesGENERAL(s string, substr string) []int {
 	var indexes []int = nil
 	var chars_processed int = 0
 	var s_len int = len(s)
@@ -142,15 +167,15 @@ func findAllIndexesGENERAL(s string, substr string) []int {
 	return indexes
 }
 
-func getFullErrorMsgGENERAL(err any) string {
+func GetFullErrorMsgGENERAL(err any) string {
 	return tracerr.SprintSource(tracerr.Wrap(err.(error)), 0)
 }
 
-func panicGENERAL(err string) {
+func PanicGENERAL(err string) {
 	panic(errors.New(err))
 }
 
-func toJsonGENERAL(v any) *string {
+func ToJsonGENERAL(v any) *string {
 	json_data, err := json.Marshal(v)
 	if nil != err {
 		return nil
@@ -166,20 +191,17 @@ func toJsonGENERAL(v any) *string {
 	return &json_str
 }
 
-func fromJsonGENERAL(json_data []byte, parsed_data any) bool {
+func FromJsonGENERAL(json_data []byte, parsed_data any) bool {
 	var json_final []byte = nil
 	var json_min, err = jsmin.Minify(json_data)
 	if nil == err {
 		json_final = json_min
 	} else {
+		// If the minifier fails, try to parse the original JSON (probably won't work, but I'll let Unmarshal() decide).
 		json_final = json_data
 	}
 
-	if nil != json.Unmarshal(json_final, parsed_data) {
-		return false
-	}
-
-	return true
+	return nil == json.Unmarshal(json_final, parsed_data)
 }
 
 /*
@@ -187,10 +209,10 @@ getVariableInfoGENERAL gets general information about a variable in a string in 
 
 -----------------------------------------------------------
 
-> Params:
+– Params:
   - v – the variable to get the information about
 
-> Returns:
+– Returns:
   - the information about the variable
 */
 func getVariableInfoGENERAL(v any) string {

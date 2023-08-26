@@ -1,3 +1,24 @@
+/*******************************************************************************
+ * Copyright 2023-2023 Edw590
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ ******************************************************************************/
+
 package Utils
 
 import (
@@ -8,30 +29,6 @@ import (
 
 	"VISOR_S_L/PERSONAL_FILES_EOG"
 )
-
-//////////////////////////////////////////////////////
-
-var UFilesDirs _FilesDirs_s
-type _FilesDirs_s struct {
-	/*
-		Path combines a path from the given subpaths of type string or GPath (ONLY), always ending a directory path
-		with the OS path separator.
-
-		To end a path to a directory, ALWAYS end with a path separator (important project convention) and is the only
-		way to know if the path is a directory or not in case: there are no permissions to access it; it doesn't exist;
-		it's a relative path - various functions here depend on this convention in these listed cases!
-
-		-----------------------------------------------------------
-
-		> Params:
-		  - sub_paths – the subpaths to combine
-
-		> Returns:
-		  - the final path as a GPath
-	*/
-	Path func(sub_paths ...any) GPath
-}
-//////////////////////////////////////////////////////
 
 // _PERSONAL_FOLDER is the name of the main directory of the personal files.
 const _PERSONAL_FOLDER string = PersonalConsts.VISOR_DIR + "PERSONAL_FILES_EOG/"
@@ -49,7 +46,23 @@ type GPath struct {
 	s string
 }
 
-func pathFILESDIRS(sub_paths ...any) GPath {
+/*
+PathFILESDIRS combines a path from the given subpaths of type string or GPath (ONLY), always ending a directory path
+with the OS path separator.
+
+To end a path to a directory, ALWAYS end with a path separator (important project convention) and is the only
+way to know if the path is a directory or not in case: there are no permissions to access it; it doesn't exist;
+it's a relative path - various functions here depend on this convention in these listed cases!
+
+-----------------------------------------------------------
+
+– Params:
+  - sub_paths – the subpaths to combine
+
+– Returns:
+  - the final path as a GPath
+*/
+func PathFILESDIRS(sub_paths ...any) GPath {
 	var sub_paths_str []string = nil
 	var ends_in_separator bool = false
 	for i, sub_path := range sub_paths {
@@ -74,7 +87,7 @@ func pathFILESDIRS(sub_paths ...any) GPath {
 		}
 
 		// If it's not a string or GPath, it's an error.
-		panicGENERAL("pathFILESDIRS() received an invalid type of parameter. " + getVariableInfoGENERAL(sub_path))
+		PanicGENERAL("pathFILESDIRS() received an invalid type of parameter. " + getVariableInfoGENERAL(sub_path))
 	}
 
 	// The call to Join() is on purpose - it correctly joins *and cleans* the final path string.
@@ -103,10 +116,10 @@ Add adds subpaths to a path.
 
 -----------------------------------------------------------
 
-> Params:
+– Params:
   - sub_paths – the subpaths to add
 
-> Returns:
+– Returns:
   - the final path as a GPath
  */
 func (gPath GPath) Add(sub_paths ...any) GPath {
@@ -114,7 +127,7 @@ func (gPath GPath) Add(sub_paths ...any) GPath {
 	// of the Path function.
 	var temp []any = append([]any{gPath}, sub_paths...)
 
-	return pathFILESDIRS(temp...)
+	return PathFILESDIRS(temp...)
 }
 
 /*
@@ -125,10 +138,10 @@ written in the GPath type), like to call Go official file/directory functions.
 
 -----------------------------------------------------------
 
-> Params:
+– Params:
   - path – the path to convert
 
-> Returns:
+– Returns:
   - the GPath
 */
 func (gPath GPath) GPathToStringConversion() string {
@@ -142,7 +155,7 @@ Note: all line breaks are replaced by "\n" for internal use, just like Python do
 
 -----------------------------------------------------------
 
-> Returns:
+– Returns:
   - the contents of the file or nil if an error occurs (including if the path describes a directory)
  */
 func (gPath GPath) ReadFile() *string {
@@ -163,28 +176,6 @@ func (gPath GPath) ReadFile() *string {
 }
 
 /*
-WriteFile writes the contents of a file, creating it and any directories if necessary.
-
------------------------------------------------------------
-
-> Params:
-  - content – the contents to write
-
-> Returns:
-  - true if the file was written successfully, false otherwise (including if the path describes a directory)
- */
-func (gPath GPath) WriteFile(content []byte) bool {
-	if gPath.IsDir() || !gPath.CreateDir() {
-		return false
-	}
-
-	var err = os.WriteFile(gPath.s, content, 0o777)
-	_ = os.Chmod(gPath.s, 0o777)
-
-	return nil == err
-}
-
-/*
 WriteTextFile writes the contents of a text file, creating it and any directories if necessary.
 
 Note: all line breaks are replaced by the OS line break(s). So for Windows, "\r" and "\n" are replaced by "\r\n" and for
@@ -192,13 +183,13 @@ any other, "\r\n" and "\r" are replaced by "\n".
 
 -----------------------------------------------------------
 
-> Params:
+– Params:
   - content – the contents to write
 
-> Returns:
-  - true if the file was written successfully, false otherwise (including if the path describes a directory)
- */
-func (gPath GPath) WriteTextFile(content string) bool {
+– Returns:
+  - nil if the file was written successfully, an error otherwise (including if the path describes a directory)
+*/
+func (gPath GPath) WriteTextFile(content string) error {
 	var new_content string = content
 	if "windows" == runtime.GOOS {
 		new_content = strings.ReplaceAll(new_content, "\r\n", "\n")
@@ -213,11 +204,33 @@ func (gPath GPath) WriteTextFile(content string) bool {
 }
 
 /*
+WriteFile writes the contents of a file, creating it and any directories if necessary.
+
+-----------------------------------------------------------
+
+– Params:
+  - content – the contents to write
+
+– Returns:
+  - nil if the file was written successfully, an error otherwise (including if the path describes a directory)
+ */
+func (gPath GPath) WriteFile(content []byte) error {
+	if gPath.IsDir() || !gPath.CreateDir() {
+		return nil
+	}
+
+	var err = os.WriteFile(gPath.s, content, 0o777)
+	_ = os.Chmod(gPath.s, 0o777)
+
+	return err
+}
+
+/*
 IsDir checks if a path is a directory or a file, no matter if it exists and we have permissions to see it or not.
 
 -----------------------------------------------------------
 
-> Returns:
+– Returns:
   - true if the path describes a directory, false if it describes a file
 */
 func (gPath GPath) IsDir() bool {
@@ -234,7 +247,7 @@ Exists checks if a path exists.
 
 -----------------------------------------------------------
 
-> Returns:
+– Returns:
   - true if the path exists (meaning the program also has permissions to *see* the file), false otherwise
 */
 func (gPath GPath) Exists() bool {
@@ -249,7 +262,7 @@ path represents a file.
 
 -----------------------------------------------------------
 
-> Returns:
+– Returns:
   - true if the path was created successfully, false otherwise
  */
 func (gPath GPath) CreateDir() bool {

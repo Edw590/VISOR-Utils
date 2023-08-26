@@ -1,3 +1,24 @@
+/*******************************************************************************
+ * Copyright 2023-2023 Edw590
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ ******************************************************************************/
+
 package Utils
 
 import (
@@ -8,7 +29,7 @@ import (
 
 //////////////////////////////////////////////////////
 
-var USlices slices_s
+//var USlices slices_s
 type slices_s struct {
 	/*
 		DelElem removes an element from a slice by its index.
@@ -17,11 +38,11 @@ type slices_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - slice – a pointer to the slice header
 		  - index – the index of the element to remove
 
-		> Returns:
+		– Returns:
 		  - nothing
 	*/
 	DelElem func(slice any, index int)
@@ -30,12 +51,12 @@ type slices_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - slice – a pointer to the slice header
 		  - element – the element to add
 		  - index – the index to add the element on, with range [0, len(slice)]
 
-		> Returns:
+		– Returns:
 		  - nothing
 	*/
 	AddElem func(slice any, element any, index int)
@@ -59,10 +80,10 @@ type slices_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - slice – the slice
 
-		> Returns:
+		– Returns:
 		  - the new slice as an Interface (use type assertion to get the correct slice type)
 	*/
 	CopyOuter func(slice any) any
@@ -76,23 +97,23 @@ type slices_s struct {
 
 		-----------------------------------------------------------
 
-		> Params:
+		– Params:
 		  - dest – a pointer to an empty destination slice header/array
 		  - src – the source slice/array
 
-		> Returns:
+		– Returns:
 		  - true if the slice was fully copied, false if an error occurred
 	*/
 	CopyFull func(dest any, src any) bool
 }
 //////////////////////////////////////////////////////
 
-func delElemSLICES(slice any, index int) {
+func DelElemSLICES(slice any, index int) {
 	var slice_value reflect.Value = reflect.ValueOf(slice).Elem()
 	slice_value.Set(reflect.AppendSlice(slice_value.Slice(0, index), slice_value.Slice(index+1, slice_value.Len())))
 }
 
-func addElemSLICES(slice any, element any, index int) {
+func AddElemSLICES[T any](slice []T, element T, index int) {
 	var slice_value reflect.Value = reflect.ValueOf(slice).Elem()
 	var element_value reflect.Value = reflect.ValueOf(element)
 	var result reflect.Value
@@ -107,7 +128,7 @@ func addElemSLICES(slice any, element any, index int) {
 	slice_value.Set(result)
 }
 
-func copyOuterSLICES(slice any) any {
+func CopyOuterSLICES[T any](slice T) T {
 	var slice_value reflect.Value = reflect.ValueOf(slice)
 	var new_slice reflect.Value = reflect.MakeSlice(slice_value.Type(), slice_value.Len(), slice_value.Cap())
 	reflect.Copy(new_slice, slice_value)
@@ -115,7 +136,7 @@ func copyOuterSLICES(slice any) any {
 	return new_slice.Interface()
 }
 
-func copyFullSLICES(dest any, src any) bool {
+func CopyFullSLICES[T any](dest T, src T) bool {
 	var buf *bytes.Buffer = new(bytes.Buffer)
 	var err error = gob.NewEncoder(buf).Encode(src)
 	if nil != err {
@@ -136,11 +157,11 @@ From https://stackoverflow.com/a/70802740/8228163.
 
 -----------------------------------------------------------
 
-> Params:
+– Params:
   - s – the slice
   - e – the element to check
 
-> Returns:
+– Returns:
   - true if the slice contains the element, false otherwise
 */
 func ContainsSLICES[T comparable](s []T, e T) bool {

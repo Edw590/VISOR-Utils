@@ -1,3 +1,24 @@
+/*******************************************************************************
+ * Copyright 2023-2023 Edw590
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ ******************************************************************************/
+
 package Utils
 
 import (
@@ -8,72 +29,6 @@ import (
 
 	PersonalConsts "VISOR_S_L/PERSONAL_FILES_EOG"
 )
-
-//////////////////////////////////////////////////////
-
-var UEmail _Email_s
-type _Email_s struct {
-	/*
-		GetEmailModelFile returns the contents of an email model file.
-
-		-----------------------------------------------------------
-
-		> Params:
-		  - file_name – the name of the file
-
-		> Returns:
-		  - the contents of the file or nil if an error occurred
-	*/
-	GetModelFile func(file_name string) *string
-	/*
-		QueueEmail queues an email to be sent by the UEmail Sender module.
-
-		-----CONSTANTS-----
-		  - MODEL_FILE_INFO – model file for information emails.
-		  - MODEL_FILE_RSS – model file for RSS feed notification emails.
-		  - MODEL_FILE_YT_VIDEO – model file for YouTube video notification emails.
-		  - _MODEL_FILE_MESSAGE_EML – model file for the main message.eml file.
-		-----CONSTANTS-----
-
-		-----------------------------------------------------------
-
-		> Params:
-		  - emailInfo – the email info
-		  - multiparts – the list of multipart items to attach to the email aside from the main HTML or nil to ignore
-
-		> Returns:
-		  - true if the email was queued successfully, false otherwise
-	*/
-	QueueEmail func(emailInfo EmailInfo) bool
-	/*
-		Send sends an email with the given message and receiver.
-
-		***DO NOT USE OUTSIDE THE EMAIL SENDER MODULE***
-
-		-----------------------------------------------------------
-
-		> Params:
-		  - message_eml – the complete message to be sent in EML format
-		  - mail_to – the receiver of the email
-
-		> Returns:
-		  - true if the email was sent successfully, false otherwise
-	*/
-	SendEmail func(message_eml string, mail_to string) bool
-	/*
-		ToQuotedPrintable converts a string to a quoted printable string.
-
-		-----------------------------------------------------------
-
-		> Params:
-		  - str – the string to convert
-
-		> Returns:
-		  - the quoted printable string or nil if an error occurs
-	*/
-	ToQuotedPrintableEMAIL func(str string) *string
-}
-//////////////////////////////////////////////////////
 
 // EmailInfo is the info needed to send an email through QueueEmail().
 type EmailInfo struct {
@@ -109,17 +64,47 @@ const MODEL_FILE_RSS string = "model_email_rss.html"
 const MODEL_FILE_YT_VIDEO string = "model_email_video_YouTube.html"
 const MODEL_FILE_DISKS_SMART string = "model_email_disks_smart.html"
 const _MODEL_FILE_MESSAGE_EML string = "model_message.eml"
-func getModelFileEMAIL(file_name string) *string {
+/*
+GetModelFileEMAIL returns the contents of an email model file.
+
+-----------------------------------------------------------
+
+– Params:
+  - file_name – the name of the file
+
+– Returns:
+  - the contents of the file or nil if an error occurred
+*/
+func GetModelFileEMAIL(file_name string) *string {
 	return getModDirMODULES(NUM_MOD_EmailSender).Add(_EMAIL_MODELS_FOLDER, file_name).ReadFile()
 }
 
-func queueEmailEMAIL(emailInfo EmailInfo) bool {
-	var message_eml string = prepareEmlEMAIL(emailInfo)
+/*
+QueueEmailEMAIL queues an email to be sent by the UEmail Sender module.
+
+-----CONSTANTS-----
+  - MODEL_FILE_INFO – model file for information emails.
+  - MODEL_FILE_RSS – model file for RSS feed notification emails.
+  - MODEL_FILE_YT_VIDEO – model file for YouTube video notification emails.
+  - _MODEL_FILE_MESSAGE_EML – model file for the main message.eml file.
+-----CONSTANTS-----
+
+-----------------------------------------------------------
+
+– Params:
+  - emailInfo – the email info
+  - multiparts – the list of multipart items to attach to the email aside from the main HTML or nil to ignore
+
+– Returns:
+  - nil if the email was queued successfully, otherwise an error
+*/
+func QueueEmailEMAIL(emailInfo EmailInfo) error {
+	var message_eml, _ string = prepareEmlEMAIL(emailInfo)
 
 	var file_name string = ""
 	var to_send_dir GPath = getModDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER)
 	for {
-		var rand_string string = randStringGENERAL(RAND_STR_LEN)
+		var rand_string string = RandStringGENERAL(RAND_STR_LEN)
 		_, err := os.ReadFile(to_send_dir.Add(rand_string + emailInfo.Mail_to + ".eml").
 			GPathToStringConversion())
 		if nil != err {
@@ -132,13 +117,40 @@ func queueEmailEMAIL(emailInfo EmailInfo) bool {
 	}
 }
 
-func sendEmailEMAIL(message_eml string, mail_to string) bool {
-	getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).WriteTextFile(message_eml)
-	_, _, err := execCmdSHELL(getCurlStringEMAIL(mail_to))
+/*
+SendEmailEMAIL sends an email with the given message and receiver.
 
-	return nil == err
+***DO NOT USE OUTSIDE THE EMAIL SENDER MODULE***
+
+-----------------------------------------------------------
+
+– Params:
+  - message_eml – the complete message to be sent in EML format
+  - mail_to – the receiver of the email
+
+– Returns:
+  - nil if the email was sent successfully, otherwise an error
+*/
+func SendEmailEMAIL(message_eml string, mail_to string) error {
+	if err := getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).WriteTextFile(message_eml); nil != err {
+		return err
+	}
+	_, err := ExecCmdSHELL(getCurlStringEMAIL(mail_to))
+
+	return err
 }
 
+/*
+ToQuotedPrintableEMAIL converts a string to a quoted printable string.
+
+-----------------------------------------------------------
+
+– Params:
+  - str – the string to convert
+
+– Returns:
+  - the quoted printable string or nil if an error occurs
+*/
 func ToQuotedPrintableEMAIL(str string) *string {
 	var ac bytes.Buffer
 	w := quotedprintable.NewWriter(&ac)
@@ -160,15 +172,15 @@ prepareEmlEMAIL prepares the EML file of the email.
 
 -----------------------------------------------------------
 
-> Params:
+– Params:
   - emailInfo – the email info
   - multiparts – the list of multipart items to attach to the email aside from the main HTML or nil to ignore
 
-> Returns:
+– Returns:
   - the email EML file to be sent
 */
-func prepareEmlEMAIL(emailInfo EmailInfo) string {
-	var message_eml string = *getModelFileEMAIL(_MODEL_FILE_MESSAGE_EML)
+func prepareEmlEMAIL(emailInfo EmailInfo) (string, string) {
+	var message_eml string = *GetModelFileEMAIL(_MODEL_FILE_MESSAGE_EML)
 
 	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_MSG_SUBJECT|", emailInfo.Subject)
 	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_MSG_SENDER_NAME|", emailInfo.Sender)
@@ -190,17 +202,17 @@ func prepareEmlEMAIL(emailInfo EmailInfo) string {
 	}
 	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_MULTIPARTS|", multiparts_str)
 
-	var msg_boundary string = randStringGENERAL(25)
+	var msg_boundary string = RandStringGENERAL(25)
 	for {
 		if !strings.Contains(message_eml, msg_boundary) {
 			break
 		}
-		msg_boundary = randStringGENERAL(25)
+		msg_boundary = RandStringGENERAL(25)
 	}
 	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_BOUNDARY|", msg_boundary)
 
 
-	return message_eml
+	return message_eml, emailInfo.Mail_to
 }
 
 /*
@@ -208,7 +220,7 @@ getCurlStringEMAIL gets the cURL string that sends an email with the default mes
 
 -----------------------------------------------------------
 
-> Returns:
+– Returns:
   - the string ready to be executed by the system
 */
 func getCurlStringEMAIL(mail_to string) string {
