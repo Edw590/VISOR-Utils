@@ -199,12 +199,12 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 	// Module shutdown routine //
 
 	if errors {
-		printShutdownSequenceMODULES(true, mod_name, strconv.Itoa(mod_num))
+		printShutdownSequenceMODULES(errors, mod_name, strconv.Itoa(mod_num))
 
 		os.Exit(_MOD_GEN_ERROR_CODE)
 	}
 
-	printShutdownSequenceMODULES(false, mod_name, strconv.Itoa(mod_num))
+	printShutdownSequenceMODULES(errors, mod_name, strconv.Itoa(mod_num))
 }
 
 /*
@@ -407,8 +407,8 @@ func processModRunningMODULES[T any](modGenFileInfo ModGenFileInfo[T]) (bool, er
 	if modGenFileInfo.Run_info.Last_pid != -1 && IsPidRunningPROCESSES(modGenFileInfo.Run_info.Last_pid) &&
 		(time.Now().UnixNano() - modGenFileInfo.Run_info.Last_timestamp_ns) < (MAX_WAIT_NEXT_TIMESTAMP * 1e9) {
 
-		// todo This is temporary, to see if the modules are being started many times in a row
-		SendModErrorEmailMODULES(modGenFileInfo.Mod_num, "Module already running")
+		// todo This is temporary, to see if the modules are being started many times in a row almost instantaneously
+		panic("Module already running")
 
 		return true, nil
 	}
