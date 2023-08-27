@@ -21,7 +21,8 @@
 
 package Utils
 
-// todo Change the values of the constants below to the correct ones and remove the first underscore from their names.
+// todo Change the values of the constants below to the correct ones and remove the first underscore from their names
+//  (just like the comment just above them has them written).
 
 // _VISOR_DIR is the full path to the main directory of VISOR.
 const __VISOR_DIR string = ""
@@ -31,5 +32,5 @@ const __VISOR_EMAIL_ADDR string = ""
 // _VISOR_EMAIL_PW is VISOR's email password
 const __VISOR_EMAIL_PW string = ""
 
-// _MY_EMAIL_ADDR is my email address
-const __MY_EMAIL_ADDR string = ""
+// MY_EMAIL_ADDR is my email address
+const _MY_EMAIL_ADDR string = ""

@@ -149,11 +149,7 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 		Try: func() {
 			// Module startup routine //
 			mod_name = GetModNameMODULES(mod_num)
-			fmt.Println("//------------------------------------------\\\\")
-			fmt.Println("--- " + mod_name + " ---")
-			fmt.Println("V.I.S.O.R. Systems")
-			fmt.Println("------------------")
-			fmt.Println()
+			printStartupSequenceMODULES(mod_name)
 
 			var modGenFileInfo ModGenFileInfo[T] = getModGenFileInfoMODULES[T](mod_num)
 			exit, err := processModRunningMODULES(modGenFileInfo)
@@ -202,18 +198,13 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 
 	// Module shutdown routine //
 
-	fmt.Println()
-	fmt.Println("---------")
-
 	if errors {
-		fmt.Println("Exiting with ERRORS the module \"" + mod_name + "\" (number " + strconv.Itoa(mod_num) + ")...")
-		fmt.Println("\\\\------------------------------------------//")
+		printShutdownSequenceMODULES(true, mod_name, strconv.Itoa(mod_num))
 
 		os.Exit(_MOD_GEN_ERROR_CODE)
 	}
 
-	fmt.Println("Exiting normally the module \"" + mod_name + "\" (number " + strconv.Itoa(mod_num) + ")...")
-	fmt.Println("\\\\------------------------------------------//")
+	printShutdownSequenceMODULES(false, mod_name, strconv.Itoa(mod_num))
 }
 
 /*
@@ -259,7 +250,7 @@ func SendModErrorEmailMODULES(mod_num int, err_str string) error {
 
 	return SendEmailEMAIL(prepareEmlEMAIL(EmailInfo{
 		Sender:  "VISOR - Info",
-		Mail_to: _MY_EMAIL_ADDR,
+		Mail_to: MY_EMAIL_ADDR,
 		Subject: "Error in module: " + GetModNameMODULES(mod_num),
 		Html:    html,
 	}))
@@ -332,6 +323,25 @@ func (modGenFileInfo ModGenFileInfo[T]) Update() error {
 	}
 
 	return os.Rename(file_path_new.GPathToStringConversion(), file_path_curr.GPathToStringConversion())
+}
+
+func printStartupSequenceMODULES(mod_name string) {
+	fmt.Println("//------------------------------------------\\\\")
+	fmt.Println("--- " + mod_name + " ---")
+	fmt.Println("V.I.S.O.R. Systems")
+	fmt.Println("------------------")
+	fmt.Println()
+}
+
+func printShutdownSequenceMODULES(errors bool, mod_name string, mod_num string) {
+	fmt.Println()
+	fmt.Println("---------")
+	if errors {
+		fmt.Println("Exiting with ERRORS the module \"" + mod_name + "\" (number " + mod_num + ")...")
+	} else {
+		fmt.Println("Exiting normally the module \"" + mod_name + "\" (number " + mod_num + ")...")
+	}
+	fmt.Println("\\\\------------------------------------------//")
 }
 
 /*
