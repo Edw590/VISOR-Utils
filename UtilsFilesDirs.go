@@ -26,12 +26,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"VISOR_S_L/PERSONAL_FILES_EOG"
 )
-
-// _PERSONAL_FOLDER is the name of the main directory of the personal files.
-const _PERSONAL_FOLDER string = PersonalConsts.VISOR_DIR + "PERSONAL_FILES_EOG/"
 
 /*
 GPath (GoodPath) is sort of a copy of the string type but that represents a *surely* valid and correct path, also

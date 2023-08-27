@@ -30,17 +30,16 @@ import (
 
 	"github.com/ztrue/tracerr"
 
-	PersonalConsts "VISOR_S_L/PERSONAL_FILES_EOG"
 	"VISOR_S_L/Utils/Tcef"
 )
 
 const (
 	// _TEMP_DIR is the full path to the main directory of the temporary files.
-	_TEMP_DIR string = PersonalConsts.VISOR_DIR + "temp/"
+	_TEMP_DIR string = _VISOR_DIR + "temp/"
 	// _DATA_DIR is the full path to the main directory of the data files.
-	_DATA_DIR string = PersonalConsts.VISOR_DIR + "data/"
+	_DATA_DIR string = _VISOR_DIR + "data/"
 	// _DATA_DIR is the full path to the main directory of the modules.
-	_MOD_DIR string = PersonalConsts.VISOR_DIR + "Modules/"
+	_MOD_DIR string = _VISOR_DIR + "Modules/"
 )
 
 // _MOD_FOLDER_PREFFIX is the preffix of the modules' folders.
@@ -260,7 +259,7 @@ func SendModErrorEmailMODULES(mod_num int, err_str string) error {
 
 	return SendEmailEMAIL(prepareEmlEMAIL(EmailInfo{
 		Sender:  "VISOR - Info",
-		Mail_to: PersonalConsts.MY_EMAIL_ADDR,
+		Mail_to: _MY_EMAIL_ADDR,
 		Subject: "Error in module: " + GetModNameMODULES(mod_num),
 		Html:    html,
 	}))

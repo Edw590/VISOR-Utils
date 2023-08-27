@@ -26,8 +26,6 @@ import (
 	"mime/quotedprintable"
 	"os"
 	"strings"
-
-	PersonalConsts "VISOR_S_L/PERSONAL_FILES_EOG"
 )
 
 // EmailInfo is the info needed to send an email through QueueEmail().
@@ -225,7 +223,6 @@ getCurlStringEMAIL gets the cURL string that sends an email with the default mes
 */
 func getCurlStringEMAIL(mail_to string) string {
 	return "curl --location --connect-timeout 4294967295 "+/*--verbose*/" \"smtp://smtp.gmail.com:587\" --user \"" +
-		PersonalConsts.VISOR_EMAIL_ADDR + ":" + PersonalConsts.VISOR_EMAIL_PW + "\" --mail-rcpt \"" + mail_to +
-		"\" --upload-file \"" +	getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).GPathToStringConversion() +
-		"\" --ssl"
+		_VISOR_EMAIL_ADDR + ":" + _VISOR_EMAIL_PW + "\" --mail-rcpt \"" + mail_to + "\" --upload-file \"" +
+		getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).GPathToStringConversion() + "\" --ssl"
 }

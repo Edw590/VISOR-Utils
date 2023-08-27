@@ -1,7 +1,7 @@
 package Tcef
 
 ///////////////////////////////////////
-// Try / Catch / Finally
+// Try / Catch / Else / Finally
 
 // Credits: https://dzone.com/articles/try-and-catch-in-golang
 

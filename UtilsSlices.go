@@ -59,7 +59,7 @@ AddElemSLICES adds an element to a specific index of a slice, keeping the elemen
 – Returns:
   - nothing
 */
-func AddElemSLICES[T any](slice []T, element T, index int) {
+func AddElemSLICES[T any](slice *[]T, element T, index int) {
 	var slice_value reflect.Value = reflect.ValueOf(slice).Elem()
 	var element_value reflect.Value = reflect.ValueOf(element)
 	var result reflect.Value
@@ -98,7 +98,7 @@ of the original inner slices don't change.
   - slice – the slice
 
 – Returns:
-  - the new slice as an Interface (use type assertion to get the correct slice type)
+  - the new slice
 */
 func CopyOuterSLICES[T any](slice T) T {
 	var slice_value reflect.Value = reflect.ValueOf(slice)
@@ -110,22 +110,23 @@ func CopyOuterSLICES[T any](slice T) T {
 
 /*
 CopyFullSLICES copies all the values from slice/array to a provided slice/array with the length and capacity of the
-original, as long as both slices/arrays have the same type (that includes the length of each dimension with
-arrays).
+original.
 
-NOTE: this function is slow, according to what someone told me. Don't use unless it's really needed to copy all
+Note 1: both slices/arrays must have the same type (that includes the length of each dimension with arrays).
+
+NOTE 2: this function is slow, according to what someone told me. Don't use unless it's really necessary to copy all
 values from multidimensional slices/arrays.
 
 -----------------------------------------------------------
 
 – Params:
-  - dest – a pointer to an empty destination slice header/array
+  - dest – a pointer to an empty destination slice/array header
   - src – the source slice/array
 
 – Returns:
   - true if the slice was fully copied, false if an error occurred
 */
-func CopyFullSLICES[T any](dest T, src T) bool {
+func CopyFullSLICES[T any](dest *T, src T) bool {
 	var buf *bytes.Buffer = new(bytes.Buffer)
 	var err error = gob.NewEncoder(buf).Encode(src)
 	if nil != err {
