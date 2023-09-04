@@ -127,11 +127,6 @@ sending an email with them.
 
 Call this as the ONLY thing in the main() function of a module.
 
-This function returns when/if the module's realMain() function returns.
-
-Also, this function is outside of the functions struct because it MUST be called before using any of the structs - they
-are all initialized by this function.
-
 -----------------------------------------------------------
 
 – Generic params:
