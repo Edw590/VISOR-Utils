@@ -21,8 +21,6 @@
 
 package Utils
 
-// todo Uncomment the constants below and set their values to your case
-
 // _VISOR_DIR is the full path to the main directory of VISOR.
 //const _VISOR_DIR string = ""
 
@@ -33,3 +31,5 @@ package Utils
 
 // MY_EMAIL_ADDR is my email address
 //const MY_EMAIL_ADDR string = ""
+
+// todo Uncomment the constants above and set their values to your case

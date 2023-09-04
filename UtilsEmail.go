@@ -74,7 +74,7 @@ GetModelFileEMAIL returns the contents of an email model file.
   - the contents of the file or nil if an error occurred
 */
 func GetModelFileEMAIL(file_name string) *string {
-	return getModDirMODULES(NUM_MOD_EmailSender).Add(_EMAIL_MODELS_FOLDER, file_name).ReadFile()
+	return getProgramDataDirMODULES(NUM_MOD_EmailSender).Add(_EMAIL_MODELS_FOLDER, file_name).ReadFile()
 }
 
 /*
@@ -100,7 +100,7 @@ func QueueEmailEMAIL(emailInfo EmailInfo) error {
 	var message_eml, _ string = prepareEmlEMAIL(emailInfo)
 
 	var file_name string = ""
-	var to_send_dir GPath = getModDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER)
+	var to_send_dir GPath = getUserDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER)
 	for {
 		var rand_string string = RandStringGENERAL(RAND_STR_LEN)
 		_, err := os.ReadFile(to_send_dir.Add(rand_string + emailInfo.Mail_to + ".eml").
@@ -109,7 +109,7 @@ func QueueEmailEMAIL(emailInfo EmailInfo) error {
 			// If the file doesn't exist, choose that name.
 			file_name = rand_string + emailInfo.Mail_to + ".eml"
 
-			return getModDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER + file_name).
+			return getUserDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER + file_name).
 				WriteTextFile(message_eml)
 		}
 	}

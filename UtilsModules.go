@@ -34,12 +34,14 @@ import (
 )
 
 const (
-	// _TEMP_DIR is the full path to the main directory of the temporary files.
-	_TEMP_DIR string = _VISOR_DIR + "temp/"
 	// _DATA_DIR is the full path to the main directory of the data files.
 	_DATA_DIR string = _VISOR_DIR + "data/"
-	// _DATA_DIR is the full path to the main directory of the modules.
-	_MOD_DIR string = _VISOR_DIR + "Modules/"
+	// _TEMP_DIR is the full path to the main directory of the temporary files.
+	_TEMP_DIR string = _DATA_DIR + "Temp/"
+	// _USER_DATA_DIR is the full path to the main directory of the user data files.
+	_USER_DATA_DIR string = _DATA_DIR + "UserData/"
+	// _PROGRAM_DATA_DIR is the full path to the main directory of the program data files.
+	_PROGRAM_DATA_DIR string = _DATA_DIR + "ProgramData/"
 )
 
 // _MOD_FOLDER_PREFFIX is the preffix of the modules' folders.
@@ -97,10 +99,10 @@ type ModGenFileInfo[T any] struct {
 type ModProvInfo struct {
 	// Name is the name of the module.
 	Name string
-	// Main_Dir is the path to the main directory of the module.
-	Main_Dir GPath
-	// Data_dir is the path to the directory of the private data files of the module.
-	Data_dir GPath
+	// ProgramData_Dir is the path to the directory of the program data files.
+	ProgramData_Dir GPath
+	// UserData_dir is the path to the directory of the private user data files.
+	UserData_dir GPath
 	// Temp_dir is the path to the directory of the private temporary files of the module.
 	Temp_dir GPath
 }
@@ -159,10 +161,10 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 
 			// Execute realMain()
 			realMain(ModProvInfo{
-				Name:     mod_name,
-				Main_Dir: getModDirMODULES(mod_num),
-				Data_dir: getModDataDirMODULES(mod_num),
-				Temp_dir: getModTempDirMODULES(mod_num),
+				Name:            mod_name,
+				ProgramData_Dir: getProgramDataDirMODULES(mod_num),
+				UserData_dir:    getUserDataDirMODULES(mod_num),
+				Temp_dir:        getModTempDirMODULES(mod_num),
 			}, modGenFileInfo)
 		},
 		Catch: func(e Tcef.Exception) {
@@ -287,7 +289,7 @@ GetModUserInfo gets the information about the module from the user info file.
   - true if the file was read successfully, false otherwise
 */
 func (modProvInfo ModProvInfo) GetModUserInfo(v any) bool {
-	var p_json_file *string = modProvInfo.Data_dir.Add(_MOD_USER_INFO_JSON).ReadFile()
+	var p_json_file *string = modProvInfo.UserData_dir.Add(_MOD_USER_INFO_JSON).ReadFile()
 	if p_json_file == nil {
 		return false
 	}
@@ -309,8 +311,8 @@ Update updates the information about the module in its generated information fil
 func (modGenFileInfo ModGenFileInfo[T]) Update() error {
 	var json_str string = *ToJsonGENERAL(&modGenFileInfo)
 
-	var file_path_curr GPath = getModDataDirMODULES(modGenFileInfo.Mod_num).Add(_MOD_GEN_INFO_JSON)
-	var file_path_new GPath = getModDataDirMODULES(modGenFileInfo.Mod_num).Add(_MOD_GEN_INFO_JSON_TMP)
+	var file_path_curr GPath = getUserDataDirMODULES(modGenFileInfo.Mod_num).Add(_MOD_GEN_INFO_JSON)
+	var file_path_new GPath = getUserDataDirMODULES(modGenFileInfo.Mod_num).Add(_MOD_GEN_INFO_JSON_TMP)
 
 	var err error = file_path_new.WriteTextFile(json_str)
 	if nil != err {
@@ -340,7 +342,7 @@ func printShutdownSequenceMODULES(errors bool, mod_name string, mod_num string) 
 }
 
 /*
-getModDirMODULES gets the full path to the directory of a module.
+getProgramDataDirMODULES gets the full path to the program data directory of a module.
 
 -----------------------------------------------------------
 
@@ -348,14 +350,14 @@ getModDirMODULES gets the full path to the directory of a module.
   - mod_num – the number of the module
 
 – Returns:
-  - the full path to the directory of the module
+  - the full path to the program data directory of the module
 */
-func getModDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(_MOD_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+func getProgramDataDirMODULES(mod_num int) GPath {
+	return PathFILESDIRS(_PROGRAM_DATA_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
-getModDataDirMODULES gets the full path to the private data directory of a module.
+getUserDataDirMODULES gets the full path to the private user data directory of a module.
 
 -----------------------------------------------------------
 
@@ -365,8 +367,8 @@ getModDataDirMODULES gets the full path to the private data directory of a modul
 – Returns:
   - the full path to the private data directory of the module
 */
-func getModDataDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(_DATA_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+func getUserDataDirMODULES(mod_num int) GPath {
+	return PathFILESDIRS(_USER_DATA_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
@@ -430,10 +432,10 @@ func getModGenFileInfoMODULES[T any](mod_num int) ModGenFileInfo[T] {
 	var info ModGenFileInfo[T]
 
 	// Check first if the temporary file exists
-	var p_info *string = getModDataDirMODULES(mod_num).Add(_MOD_GEN_INFO_JSON_TMP).ReadFile()
+	var p_info *string = getUserDataDirMODULES(mod_num).Add(_MOD_GEN_INFO_JSON_TMP).ReadFile()
 	if nil == p_info {
 		// If not, check if the main file exists
-		p_info = getModDataDirMODULES(mod_num).Add(_MOD_GEN_INFO_JSON).ReadFile()
+		p_info = getUserDataDirMODULES(mod_num).Add(_MOD_GEN_INFO_JSON).ReadFile()
 		if nil == p_info {
 			// If not, write a new file
 
