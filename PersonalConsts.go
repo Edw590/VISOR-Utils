@@ -21,15 +21,75 @@
 
 package Utils
 
-// _VISOR_DIR is the full path to the main directory of VISOR.
-//const _VISOR_DIR string = ""
+import (
+	"errors"
+	"os"
+	"strings"
+)
 
-// _VISOR_EMAIL_ADDR is VISOR's email address
-//const _VISOR_EMAIL_ADDR string = ""
-// _VISOR_EMAIL_PW is VISOR's email password
-//const _VISOR_EMAIL_PW string = ""
+var PersonalConsts_GL PersonalConsts = PersonalConsts{}
 
-// MY_EMAIL_ADDR is my email address
-//const MY_EMAIL_ADDR string = ""
+// personalConstsEOG is the internal struct with the format of the PersonalConsts_EOG.json file.
+type personalConstsEOG struct {
+	VISOR_DIR string
 
-// todo Uncomment the constants above and set their values to your case
+	VISOR_EMAIL_ADDR string
+	VISOR_EMAIL_PW string
+
+	USER_EMAIL_ADDR string
+}
+
+// PersonalConsts is a struct containing the constants that are personal to the user.
+type PersonalConsts struct {
+	// _VISOR_DIR is the full path to the main directory of VISOR.
+	_VISOR_DIR string
+
+	// _VISOR_EMAIL_ADDR is VISOR's email address
+	_VISOR_EMAIL_ADDR string
+	// _VISOR_EMAIL_PW is VISOR's email password
+	_VISOR_EMAIL_PW string
+
+	// USER_EMAIL_ADDR is the email address of the user, used for all email communication
+	USER_EMAIL_ADDR string
+}
+
+/*
+init is the function that initializes the global variables of the PersonalConsts struct.
+ */
+func (personalConsts *PersonalConsts) init() error {
+	const PERSONAL_CONSTS_FILE string = "PersonalConsts_EOG.json"
+
+	bytes, err := os.ReadFile(PERSONAL_CONSTS_FILE)
+	if err != nil {
+		cwd, err := os.Getwd()
+		if err != nil {
+			cwd = "[ERROR]"
+		}
+		return errors.New("No " + PERSONAL_CONSTS_FILE + " file found in the current working directory: \"" + cwd + "\"! Aborting...")
+	}
+
+	var struct_file_format personalConstsEOG
+	if !FromJsonGENERAL(bytes, &struct_file_format) {
+		return errors.New("file " + PERSONAL_CONSTS_FILE + " file is corrupted! Aborting...")
+	}
+
+	// Set the global variables
+
+	personalConsts._VISOR_DIR = struct_file_format.VISOR_DIR
+
+	personalConsts._VISOR_EMAIL_ADDR = struct_file_format.VISOR_EMAIL_ADDR
+	personalConsts._VISOR_EMAIL_PW = struct_file_format.VISOR_EMAIL_PW
+
+	personalConsts.USER_EMAIL_ADDR = struct_file_format.USER_EMAIL_ADDR
+
+	if !strings.Contains(personalConsts._VISOR_EMAIL_ADDR, "@") || personalConsts._VISOR_EMAIL_PW == "" ||
+				!strings.Contains(personalConsts.USER_EMAIL_ADDR, "@") {
+		return errors.New("Some fields in " + PERSONAL_CONSTS_FILE + " are empty! Aborting...")
+	}
+
+	if !PathFILESDIRS(personalConsts._VISOR_DIR).Exists() || !PathFILESDIRS(personalConsts._VISOR_DIR).DescribesDir() {
+		return errors.New("The VISOR directory \"" + personalConsts._VISOR_DIR + "\" does not exist! Aborting...")
+	}
+
+	return nil
+}

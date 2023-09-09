@@ -22,26 +22,25 @@
 package Utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ztrue/tracerr"
-
-	"VISOR_Server/Utils/Tcef"
+	"Utils/Tcef"
 )
 
 const (
-	// _DATA_DIR is the full path to the main directory of the data files.
-	_DATA_DIR string = _VISOR_DIR + "data/"
-	// _TEMP_DIR is the full path to the main directory of the temporary files.
-	_TEMP_DIR string = _DATA_DIR + "Temp/"
-	// _USER_DATA_DIR is the full path to the main directory of the user data files.
-	_USER_DATA_DIR string = _DATA_DIR + "UserData/"
-	// _PROGRAM_DATA_DIR is the full path to the main directory of the program data files.
-	_PROGRAM_DATA_DIR string = _DATA_DIR + "ProgramData/"
+	// _DATA_REL_DIR is the relative path to the data directory from PersonalConsts._VISOR_DIR.
+	_DATA_REL_DIR string = "data/"
+	// _TEMP_FOLDER is the relative path to the temporary folder from PersonalConsts._VISOR_DIR.
+	_TEMP_FOLDER string = _DATA_REL_DIR + "Temp/"
+	// _USER_DATA_REL_DIR is the relative path to the user data directory from PersonalConsts._VISOR_DIR.
+	_USER_DATA_REL_DIR string = _DATA_REL_DIR + "UserData/"
+	// _PROGRAM_DATA_REL_DIR is the relative path to the program data directory from PersonalConsts._VISOR_DIR.
+	_PROGRAM_DATA_REL_DIR string = _DATA_REL_DIR + "ProgramData/"
 )
 
 // _MOD_FOLDER_PREFFIX is the preffix of the modules' folders.
@@ -141,18 +140,32 @@ Call this as the ONLY thing in the main() function of a module.
 func ModStartup[T any](mod_num int, realMain RealMain) {
 	// Try to run the module, catching any fatal errors and sending an email with them.
 	var mod_name string = "ERROR"
-	var errors bool = false
+	var errs bool = false
 	Tcef.Tcef{
 		Try: func() {
+			// Initialize the personal "constants"
+			err := PersonalConsts_GL.init()
+			if err != nil {
+				fmt.Println("CRITICAL ERROR: " + GetFullErrorMsgGENERAL(err))
+				errs = true
+
+				return
+			}
+
 			// Module startup routine //
 			mod_name = GetModNameMODULES(mod_num)
 			printStartupSequenceMODULES(mod_name)
 
-			var modGenFileInfo ModGenFileInfo[T] = getModGenFileInfoMODULES[T](mod_num)
-			exit, err := processModRunningMODULES(modGenFileInfo)
+			modGenFileInfo, err := getModGenFileInfoMODULES[T](mod_num)
+			var exit bool = false
+			if nil == err {
+				exit, err = processModRunningMODULES(modGenFileInfo)
+			}
 			if nil != err {
-				if err1 := SendModErrorEmailMODULES(mod_num, GetFullErrorMsgGENERAL(err)); nil != err1 {
-					fmt.Println("Error sending email with error: " + GetFullErrorMsgGENERAL(err1))
+				var str_error string = GetFullErrorMsgGENERAL(err)
+				if err1 := SendModErrorEmailMODULES(mod_num,str_error); nil != err1 {
+					fmt.Println("Error sending email with errors\n" +
+						GetFullErrorMsgGENERAL(err1) + "\n-----\n" + str_error)
 				}
 			}
 			if exit {
@@ -168,40 +181,27 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 			}, modGenFileInfo)
 		},
 		Catch: func(e Tcef.Exception) {
-			errors = true
+			errs = true
 
-			var str_email string = ""
-			var str_terminal string = ""
-			if err, ok := e.(error); ok {
-				// tracerr only works with errors
-				str_email = GetFullErrorMsgGENERAL(err)
-				// Colors for the terminal (not for the email because the colors use ANSI escape codes that are read by
-				// the terminal only).
-				str_terminal = tracerr.SprintSourceColor(tracerr.Wrap(err), 0)
-			} else {
-				// If the exception is not an error, get general information about it
-				var err_str string = "Invalid type of error information (not a Go \"error\"). " + getVariableInfoGENERAL(e)
-				str_email = err_str
-				str_terminal = err_str
-			}
+			var str_error string = GetFullErrorMsgGENERAL(e)
 
 			// Print the error and send an email with it
-			fmt.Println(str_terminal)
-			if err := SendModErrorEmailMODULES(mod_num, str_email); nil != err {
-				fmt.Println("Error sending email with error: " + GetFullErrorMsgGENERAL(err))
+			fmt.Println(str_error)
+			if err := SendModErrorEmailMODULES(mod_num, str_error); nil != err {
+				fmt.Println("Error sending email with error:\n" + GetFullErrorMsgGENERAL(err) + "\n-----\n" + str_error)
 			}
 		},
 	}.Do()
 
 	// Module shutdown routine //
 
-	if errors {
-		printShutdownSequenceMODULES(errors, mod_name, strconv.Itoa(mod_num))
+	if errs {
+		printShutdownSequenceMODULES(errs, mod_name, strconv.Itoa(mod_num))
 
 		os.Exit(_MOD_GEN_ERROR_CODE)
 	}
 
-	printShutdownSequenceMODULES(errors, mod_name, strconv.Itoa(mod_num))
+	printShutdownSequenceMODULES(errs, mod_name, strconv.Itoa(mod_num))
 }
 
 /*
@@ -241,16 +241,25 @@ module.
 func SendModErrorEmailMODULES(mod_num int, err_str string) error {
 	var html_message string = "<pre>" + err_str + "</pre>"
 
-	var html string = *GetModelFileEMAIL(MODEL_FILE_INFO)
+	var p_html *string = GetModelFileEMAIL(MODEL_FILE_INFO)
+	if nil == p_html {
+		return errors.New("error getting email model file \"" + MODEL_FILE_INFO + "\"")
+	}
+	var html string = *p_html
 	html = strings.ReplaceAll(html, "|3234_HTML_MESSAGE|", html_message)
 	html = strings.ReplaceAll(html, "|3234_DATE_TIME|", GetDateTimeStrTIMEDATE())
 
-	return SendEmailEMAIL(prepareEmlEMAIL(EmailInfo{
+	message_eml, mail_to, success := prepareEmlEMAIL(EmailInfo{
 		Sender:  "VISOR - Info",
-		Mail_to: MY_EMAIL_ADDR,
+		Mail_to: PersonalConsts_GL.USER_EMAIL_ADDR,
 		Subject: "Error in module: " + GetModNameMODULES(mod_num),
 		Html:    html,
-	}))
+	})
+	if !success {
+		return errors.New("error preparing email")
+	}
+
+	return SendEmailEMAIL(message_eml, mail_to, true)
 }
 
 /*
@@ -322,6 +331,14 @@ func (modGenFileInfo ModGenFileInfo[T]) Update() error {
 	return os.Rename(file_path_new.GPathToStringConversion(), file_path_curr.GPathToStringConversion())
 }
 
+/*
+printStartupSequenceMODULES prints the startup sequence of a module.
+
+-----------------------------------------------------------
+
+– Params:
+  - mod_name – the name of the module
+*/
 func printStartupSequenceMODULES(mod_name string) {
 	fmt.Println("//------------------------------------------\\\\")
 	fmt.Println("--- " + mod_name + " ---")
@@ -330,6 +347,16 @@ func printStartupSequenceMODULES(mod_name string) {
 	fmt.Println()
 }
 
+/*
+printShutdownSequenceMODULES prints the shutdown sequence of a module.
+
+-----------------------------------------------------------
+
+– Params:
+  - errors – true if the module is exiting with errors, false otherwise
+  - mod_name – the name of the module
+  - mod_num – the number of the module
+*/
 func printShutdownSequenceMODULES(errors bool, mod_name string, mod_num string) {
 	fmt.Println()
 	fmt.Println("---------")
@@ -353,7 +380,7 @@ getProgramDataDirMODULES gets the full path to the program data directory of a m
   - the full path to the program data directory of the module
 */
 func getProgramDataDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(_PROGRAM_DATA_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return PathFILESDIRS(PersonalConsts_GL._VISOR_DIR, _PROGRAM_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
@@ -368,7 +395,7 @@ getUserDataDirMODULES gets the full path to the private user data directory of a
   - the full path to the private data directory of the module
 */
 func getUserDataDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(_USER_DATA_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return PathFILESDIRS(PersonalConsts_GL._VISOR_DIR, _USER_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
@@ -383,7 +410,7 @@ getModTempDirMODULES gets the full path to the private temporary directory of a 
   - the full path to the private temporary directory of the module
 */
 func getModTempDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(_TEMP_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return PathFILESDIRS(PersonalConsts_GL._VISOR_DIR, _TEMP_FOLDER, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
@@ -404,8 +431,8 @@ func processModRunningMODULES[T any](modGenFileInfo ModGenFileInfo[T]) (bool, er
 	if modGenFileInfo.Run_info.Last_pid != -1 && IsPidRunningPROCESSES(modGenFileInfo.Run_info.Last_pid) &&
 		(time.Now().UnixNano() - modGenFileInfo.Run_info.Last_timestamp_ns) < (MAX_WAIT_NEXT_TIMESTAMP * 1e9) {
 
-		// todo This is temporary, to see if the modules are being started many times in a row almost instantaneously
-		panic("Module already running")
+		// todo This is temporary, to see when the modules are being started many times in a row almost instantaneously
+		PanicGENERAL("Module already running")
 
 		return true, nil
 	}
@@ -428,7 +455,7 @@ exist.
 – Returns:
   - the information of the module
 */
-func getModGenFileInfoMODULES[T any](mod_num int) ModGenFileInfo[T] {
+func getModGenFileInfoMODULES[T any](mod_num int) (ModGenFileInfo[T], error) {
 	var info ModGenFileInfo[T]
 
 	// Check first if the temporary file exists
@@ -444,7 +471,7 @@ func getModGenFileInfoMODULES[T any](mod_num int) ModGenFileInfo[T] {
 	}
 
 	if FromJsonGENERAL([]byte(*p_info), &info) {
-		return info
+		return info, nil
 	}
 
 write_file:
@@ -452,7 +479,6 @@ write_file:
 	info.Mod_num = mod_num
 	info.Run_info.Last_pid = -1
 	info.Run_info.Last_timestamp_ns = -1
-	info.Update()
 
-	return info
+	return info, info.Update()
 }

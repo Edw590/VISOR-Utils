@@ -116,8 +116,18 @@ GetFullErrorMsgGENERAL gets the full error message from an error, including its 
 – Returns:
   - the full error message
 */
-func GetFullErrorMsgGENERAL(err any) string {
-	return tracerr.SprintSource(tracerr.Wrap(err.(error)), 0)
+func GetFullErrorMsgGENERAL(err_param any) string {
+	var str_error string = ""
+	if err, ok := err_param.(error); ok {
+		// tracerr only works with errors
+		str_error = tracerr.SprintSource(tracerr.Wrap(err), 0)
+	} else {
+		// If the exception is not an error, get general information about it
+		var err_str string = "Invalid type of error information (not a Go \"error\"). " + getVariableInfoGENERAL(err_param)
+		str_error = err_str
+	}
+
+	return str_error
 }
 
 /*

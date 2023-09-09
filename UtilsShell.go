@@ -41,9 +41,13 @@ type StdOutErrCmd struct {
 }
 
 /*
-ExecCmdSHELL executes a command in the shell and returns the stdout and stderr.
+ExecCmdSHELL executes a command in a shell and returns the stdout and stderr.
 
-On Windows, the command is executed in cmd.exe; on Linux, it's executed in bash.
+On Windows, the command is executed in powershell.exe; on Linux, it's executed in bash.
+
+ATTENTION: to call any program, add "{{EXE}}" right after the program name in the command string. This will be replaced
+by ".exe" on Windows and by "" on Linux. This avoids PowerShell aliases ("curl" is an alias for "Invoke-WebRequest" in
+PowerShell but the actual program in Linux, for example - but curl.exe calls the actual program).
 
 -----------------------------------------------------------
 
@@ -53,14 +57,14 @@ On Windows, the command is executed in cmd.exe; on Linux, it's executed in bash.
 – Returns:
   - the StdOutErrCmd struct containing the stdout and stderr of the command. Note that their string versions have all
     line endings replaced with "\n".
-  - the error returned by the command
+  - the error returned by the command execution, if any
 */
 func ExecCmdSHELL(command string) (StdOutErrCmd, error) {
 	var commands []string = nil
 	if "windows" == runtime.GOOS {
-		commands = []string{"cmd", "/C", command}
+		commands = []string{"powershell.exe", strings.Replace(command, "{{EXE}}", ".exe", -1)}
 	} else {
-		commands = []string{"bash", "-c", command}
+		commands = []string{"bash", "-c", strings.Replace(command, "{{EXE}}", "", -1)}
 	}
 
 	var stdout bytes.Buffer

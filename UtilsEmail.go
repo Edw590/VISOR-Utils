@@ -23,6 +23,7 @@ package Utils
 
 import (
 	"bytes"
+	"errors"
 	"mime/quotedprintable"
 	"os"
 	"strings"
@@ -97,7 +98,10 @@ QueueEmailEMAIL queues an email to be sent by the UEmail Sender module.
   - nil if the email was queued successfully, otherwise an error
 */
 func QueueEmailEMAIL(emailInfo EmailInfo) error {
-	var message_eml, _ string = prepareEmlEMAIL(emailInfo)
+	message_eml, _, success := prepareEmlEMAIL(emailInfo)
+	if !success {
+		return errors.New("error preparing the EML file")
+	}
 
 	var file_name string = ""
 	var to_send_dir GPath = getUserDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER)
@@ -125,15 +129,17 @@ SendEmailEMAIL sends an email with the given message and receiver.
 – Params:
   - message_eml – the complete message to be sent in EML format
   - mail_to – the receiver of the email
+  - emergency_email – true if the email is an emergency email and so will make this function halt until the connection
+	is made, false otherwise
 
 – Returns:
   - nil if the email was sent successfully, otherwise an error
 */
-func SendEmailEMAIL(message_eml string, mail_to string) error {
+func SendEmailEMAIL(message_eml string, mail_to string, emergency_email bool) error {
 	if err := getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).WriteTextFile(message_eml); nil != err {
 		return err
 	}
-	_, err := ExecCmdSHELL(getCurlStringEMAIL(mail_to))
+	_, err := ExecCmdSHELL(getCurlStringEMAIL(mail_to, emergency_email))
 
 	return err
 }
@@ -176,9 +182,15 @@ prepareEmlEMAIL prepares the EML file of the email.
 
 – Returns:
   - the email EML file to be sent
+  - the receiver of the email
+  - nil if the email was queued successfully, otherwise an error
 */
-func prepareEmlEMAIL(emailInfo EmailInfo) (string, string) {
-	var message_eml string = *GetModelFileEMAIL(_MODEL_FILE_MESSAGE_EML)
+func prepareEmlEMAIL(emailInfo EmailInfo) (string, string, bool) {
+	var p_message_eml *string = GetModelFileEMAIL(_MODEL_FILE_MESSAGE_EML)
+	if p_message_eml == nil {
+		return "", "", false
+	}
+	var message_eml string = *p_message_eml
 
 	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_MSG_SUBJECT|", emailInfo.Subject)
 	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_MSG_SENDER_NAME|", emailInfo.Sender)
@@ -210,7 +222,7 @@ func prepareEmlEMAIL(emailInfo EmailInfo) (string, string) {
 	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_BOUNDARY|", msg_boundary)
 
 
-	return message_eml, emailInfo.Mail_to
+	return message_eml, emailInfo.Mail_to, true
 }
 
 /*
@@ -218,11 +230,22 @@ getCurlStringEMAIL gets the cURL string that sends an email with the default mes
 
 -----------------------------------------------------------
 
+– Params:
+  - mail_to – the receiver of the email
+  - emergency_email – true if the email is an emergency email and so will make this function halt until the connection
+    is made, false otherwise
+
 – Returns:
   - the string ready to be executed by the system
 */
-func getCurlStringEMAIL(mail_to string) string {
-	return "curl --location --connect-timeout 4294967295 "+/*--verbose*/" \"smtp://smtp.gmail.com:587\" --user \"" +
-		_VISOR_EMAIL_ADDR + ":" + _VISOR_EMAIL_PW + "\" --mail-rcpt \"" + mail_to + "\" --upload-file \"" +
-		getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).GPathToStringConversion() + "\" --ssl"
+func getCurlStringEMAIL(mail_to string, emergency_email bool) string {
+	var timeout string = "10"
+	if emergency_email {
+		timeout = "100000"
+	}
+
+	return "curl{{EXE}} --location --connect-timeout " + timeout + " --verbose \"smtp://smtp.gmail.com:587\" --user \"" +
+		PersonalConsts_GL._VISOR_EMAIL_ADDR + ":" + PersonalConsts_GL._VISOR_EMAIL_PW + "\" --mail-rcpt \"" + mail_to +
+		"\" --upload-file \"" + getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).GPathToStringConversion() +
+		"\" --ssl-reqd"
 }

@@ -35,7 +35,7 @@ according to the project conventions as described in the Path() function.
 It's a "good path" because it's only given by Path(), which corrects the paths, and because the string component is
 private to the package and only requested when absolutely necessary, like to communicate with Go's official functions
 that require a string.
- */
+*/
 type GPath struct {
 	// s is the string that represents the path.
 	s string
@@ -44,6 +44,8 @@ type GPath struct {
 /*
 PathFILESDIRS combines a path from the given subpaths of type string or GPath (ONLY), always ending a directory path
 with the OS path separator.
+
+Note: the final path separator is the first one found in the subpaths, or the OS path separator if none is found.
 
 To end a path to a directory, ALWAYS end with a path separator (important project convention) and is the only
 way to know if the path is a directory or not in case: there are no permissions to access it; it doesn't exist;
@@ -59,14 +61,10 @@ it's a relative path - various functions here depend on this convention in these
 */
 func PathFILESDIRS(sub_paths ...any) GPath {
 	var sub_paths_str []string = nil
-	var ends_in_separator bool = false
-	for i, sub_path := range sub_paths {
+	for _, sub_path := range sub_paths {
 		val_str, ok := sub_path.(string)
 		if ok {
 			sub_paths_str = append(sub_paths_str, val_str)
-			if i == len(sub_paths)-1 && (strings.HasSuffix(val_str, "/") || strings.HasSuffix(val_str, "\\")) {
-				ends_in_separator = true
-			}
 
 			continue
 		}
@@ -74,9 +72,6 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 		val_GPath, ok := sub_path.(GPath)
 		if ok {
 			sub_paths_str = append(sub_paths_str, val_GPath.s)
-			if i == len(sub_paths)-1 && (strings.HasSuffix(val_GPath.s, "/") || strings.HasSuffix(val_GPath.s, "\\")) {
-				ends_in_separator = true
-			}
 
 			continue
 		}
@@ -85,15 +80,54 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 		PanicGENERAL("pathFILESDIRS() received an invalid type of parameter. " + getVariableInfoGENERAL(sub_path))
 	}
 
+	if len(sub_paths_str) == 0 {
+		return GPath{}
+	}
+
+	// Get the first path separator found in the subpaths.
+	var path_separator string = ""
+
+	// Replace all the path separators with the OS path separator.
+	for i, sub_path := range sub_paths_str {
+		if path_separator == "" {
+			for _, char := range sub_path {
+				if "/" == string(char) || "\\" == string(char) {
+					path_separator = string(char)
+
+					break
+				}
+			}
+		}
+
+		// Replace all the path separators with the OS path separator for Join() to work (only works with the OS one).
+		sub_path = strings.Replace(sub_path, "/", string(os.PathSeparator), -1)
+		sub_path = strings.Replace(sub_path, "\\", string(os.PathSeparator), -1)
+
+		sub_paths_str[i] = sub_path
+	}
+	if path_separator == "" {
+		// If no path separator was found, use the OS path separator.
+		path_separator = string(os.PathSeparator)
+	}
+
+	// Check if the last subpath ends in a path separator before calling Join() which will remove it if it's there.
+	var ends_in_separator bool = false
+	if strings.HasSuffix(sub_paths_str[len(sub_paths_str)-1], string(os.PathSeparator)) {
+		ends_in_separator = true
+	}
+
 	// The call to Join() is on purpose - it correctly joins *and cleans* the final path string.
 	var gPath GPath = GPath{filepath.Join(sub_paths_str...)}
 
-	// Here can be os.PathSeparator and it will always be correct because the path is already cleaned.
-	var path_separator string = string(os.PathSeparator)
-	// Check if the path represents a directory and if it does, make sure the path separator is at the end.
+	// Replace all the OS path separators with the first path separator found in the subpaths, to keep the original path
+	// separator. Like if the path begins with "C:\" and the rest contains whatever separators, they need to be
+	// converted to "\" to work on Windows (just an example).
+	gPath.s = strings.Replace(gPath.s, string(os.PathSeparator), path_separator, -1)
+
+	// Check if the path represents a directory and if it does, make sure the path separator is at the end (especially
+	// since Join() removes it if it's there).
 	if gPath.Exists() {
-		// Check if it's a directory through OS stats.
-		if gPath.IsDir() && !strings.HasSuffix(gPath.s, path_separator) {
+		if gPath.DescribesDir() && !strings.HasSuffix(gPath.s, path_separator) {
 			gPath.s += path_separator
 		}
 	} else {
@@ -154,7 +188,7 @@ Note: all line breaks are replaced by "\n" for internal use, just like Python do
   - the contents of the file or nil if an error occurs (including if the path describes a directory)
  */
 func (gPath GPath) ReadFile() *string {
-	if gPath.IsDir() {
+	if gPath.DescribesDir() {
 		return nil
 	}
 
@@ -210,7 +244,7 @@ WriteFile writes the contents of a file, creating it and any directories if nece
   - nil if the file was written successfully, an error otherwise (including if the path describes a directory)
  */
 func (gPath GPath) WriteFile(content []byte) error {
-	if gPath.IsDir() || !gPath.CreateDir() {
+	if gPath.DescribesDir() || !gPath.CreateDir() {
 		return nil
 	}
 
@@ -221,14 +255,19 @@ func (gPath GPath) WriteFile(content []byte) error {
 }
 
 /*
-IsDir checks if a path is a directory or a file, no matter if it exists and we have permissions to see it or not.
+DescribesDir checks if a path DESCRIBES a directory or a file - means no matter if it exists or we have permissions to
+see it or not.
+
+It first checks if the path exists and if it does, checks if it's a directory or not - else it resorts to the path
+string only using the project convention in which a path that ends in a path separator is a directory and one that
+doesn't is a file.
 
 -----------------------------------------------------------
 
 – Returns:
   - true if the path describes a directory, false if it describes a file
-*/
-func (gPath GPath) IsDir() bool {
+ */
+func (gPath GPath) DescribesDir() bool {
 	file_info, err := os.Stat(gPath.s)
 	if nil == err {
 		return file_info.IsDir()
@@ -248,7 +287,21 @@ Exists checks if a path exists.
 func (gPath GPath) Exists() bool {
 	_, err := os.Stat(gPath.s)
 
-	return nil == err
+	if err != nil {
+		return false
+	}
+
+	if runtime.GOOS == "windows" {
+		if (strings.HasPrefix(gPath.s, "\\") && !strings.HasPrefix(gPath.s, "\\\\")) ||
+					(strings.HasPrefix(gPath.s, "/") && !strings.HasPrefix(gPath.s, "//")) {
+			// Apparently on Windows, /some/path is interpreted as C:\some\path, so we need to check if the path begins
+			// with \ or / (excluding \\ and //, which are interpreted as network paths).
+
+			return false
+		}
+	}
+
+	return true
 }
 
 /*
@@ -262,7 +315,7 @@ path represents a file.
  */
 func (gPath GPath) CreateDir() bool {
 	var path_list []string = strings.Split(gPath.s, string(os.PathSeparator))
-	if !gPath.IsDir() {
+	if !gPath.DescribesDir() {
 		// If the path is a file, remove the file part of the path from the list.
 		path_list = path_list[:len(path_list) - 1]
 	}
