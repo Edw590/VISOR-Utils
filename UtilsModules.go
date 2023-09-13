@@ -98,8 +98,8 @@ type ModGenFileInfo[T any] struct {
 type ModProvInfo struct {
 	// Name is the name of the module.
 	Name string
-	// ProgramData_Dir is the path to the directory of the program data files.
-	ProgramData_Dir GPath
+	// ProgramData_dir is the path to the directory of the program data files.
+	ProgramData_dir GPath
 	// UserData_dir is the path to the directory of the private user data files.
 	UserData_dir GPath
 	// Temp_dir is the path to the directory of the private temporary files of the module.
@@ -156,11 +156,7 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 			mod_name = GetModNameMODULES(mod_num)
 			printStartupSequenceMODULES(mod_name)
 
-			modGenFileInfo, err := getModGenFileInfoMODULES[T](mod_num)
-			var exit bool = false
-			if nil == err {
-				exit, err = processModRunningMODULES(modGenFileInfo)
-			}
+			exit, err, modGenFileInfo := processModRunningMODULES[T](mod_num)
 			if nil != err {
 				var str_error string = GetFullErrorMsgGENERAL(err)
 				if err1 := SendModErrorEmailMODULES(mod_num,str_error); nil != err1 {
@@ -175,7 +171,7 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 			// Execute realMain()
 			realMain(ModProvInfo{
 				Name:            mod_name,
-				ProgramData_Dir: getProgramDataDirMODULES(mod_num),
+				ProgramData_dir: getProgramDataDirMODULES(mod_num),
 				UserData_dir:    getUserDataDirMODULES(mod_num),
 				Temp_dir:        getModTempDirMODULES(mod_num),
 			}, modGenFileInfo)
@@ -275,15 +271,17 @@ If the number of seconds exceeds MAX_WAIT_NEXT_TIMESTAMP, uses the latter is use
 – Returns:
   - true if the sleep was successful, false otherwise
 */
-func (modGenFileInfo ModGenFileInfo[T]) LoopSleep(s int64) {
+func (modGenFileInfo ModGenFileInfo[T]) LoopSleep(s int64) error {
 	modGenFileInfo.Run_info.Last_timestamp_ns = time.Now().UnixNano()
-	modGenFileInfo.Update()
+	var err error = modGenFileInfo.Update()
 
 	var seconds = s
 	if s > MAX_WAIT_NEXT_TIMESTAMP {
 		seconds = MAX_WAIT_NEXT_TIMESTAMP
 	}
 	time.Sleep(time.Duration(seconds) * time.Second)
+
+	return err
 }
 
 /*
@@ -414,38 +412,8 @@ func getModTempDirMODULES(mod_num int) GPath {
 }
 
 /*
-processModRunningMODULES checks if the module is already running and exits if it is, and if it's not, writes the
-necessary information to the module info file.
-
------------------------------------------------------------
-
-– Params:
-  - modGenFileInfo – the information of the module
-
-– Returns:
-  - true if the module is already running, false otherwise
-  - nil if the module information was updated, false otherwise
-*/
-func processModRunningMODULES[T any](modGenFileInfo ModGenFileInfo[T]) (bool, error) {
-	// Check PID and timestamp
-	if modGenFileInfo.Run_info.Last_pid != -1 && IsPidRunningPROCESSES(modGenFileInfo.Run_info.Last_pid) &&
-		(time.Now().UnixNano() - modGenFileInfo.Run_info.Last_timestamp_ns) < (MAX_WAIT_NEXT_TIMESTAMP * 1e9) {
-
-		// todo This is temporary, to see when the modules are being started many times in a row almost instantaneously
-		PanicGENERAL("Module already running")
-
-		return true, nil
-	}
-
-	modGenFileInfo.Run_info.Last_pid = os.Getpid()
-	modGenFileInfo.Run_info.Last_timestamp_ns = time.Now().UnixNano()
-
-	return false, modGenFileInfo.Update()
-}
-
-/*
-getModGenFileInfoMODULES gets the information of a module from the module info file or creates a new one if it doesn't
-exist.
+processModRunningMODULES checks if the module is already running and exits if it is, and writes the necessary
+information to the module info files.
 
 -----------------------------------------------------------
 
@@ -453,10 +421,77 @@ exist.
   - mod_num – the number of the module
 
 – Returns:
+  - true if the module should stop running for any reason, false if it should carry on (already running, no directory
+	access, etc.)
+  - nil if the module information was updated, false otherwise
   - the information of the module
 */
-func getModGenFileInfoMODULES[T any](mod_num int) (ModGenFileInfo[T], error) {
-	var info ModGenFileInfo[T]
+func processModRunningMODULES[T any](mod_num int) (bool, error, ModGenFileInfo[T]) {
+	var curr_pid int = os.Getpid()
+	var curr_ts int64 = time.Now().UnixNano()
+
+	if err := getUserDataDirMODULES(mod_num).Add(
+				"PID=" + strconv.Itoa(curr_pid) +
+				"_TS=" + strconv.FormatInt(curr_ts, 10),
+			).Create(true); nil != err {
+		return true, err, ModGenFileInfo[T]{}
+	}
+
+	files, err := os.ReadDir(getUserDataDirMODULES(mod_num).GPathToStringConversion())
+	if nil != err {
+		return true, err, ModGenFileInfo[T]{}
+	}
+
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "PID=") {
+			var file_path GPath = getUserDataDirMODULES(mod_num).Add(file.Name())
+
+			var info_list []string = strings.Split(file.Name(), "_")
+			var pid_str string = strings.TrimPrefix(info_list[0], "PID=")
+			var ts_str string = strings.TrimPrefix(info_list[1], "TS=")
+
+			var pid int
+			if pid, err = strconv.Atoi(pid_str); nil != err {
+				_ = file_path.Remove()
+
+				continue
+			}
+			var ts int64
+			if ts, err = strconv.ParseInt(ts_str, 10, 64); nil != err {
+				_ = file_path.Remove()
+
+				continue
+			}
+
+			if pid != curr_pid {
+				if IsPidRunningPROCESSES(pid) && (curr_ts - ts) < (MAX_WAIT_NEXT_TIMESTAMP*1e9) {
+
+					// todo This is temporary, to see when the modules are being started many times in a row almost instantaneously
+					PanicGENERAL("Module already running")
+
+					_ = file_path.Remove()
+
+					return true, nil, ModGenFileInfo[T]{}
+				}
+			}
+		}
+	}
+
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "PID=") {
+			var file_path GPath = getUserDataDirMODULES(mod_num).Add(file.Name())
+
+			var info_list []string = strings.Split(file.Name(), "_")
+			var pid_str string = strings.TrimPrefix(info_list[0], "PID=")
+
+			var pid int
+			if pid, err = strconv.Atoi(pid_str); nil != err || pid != curr_pid {
+				_ = file_path.Remove()
+			}
+		}
+	}
+
+	var modGenFileInfo ModGenFileInfo[T]
 
 	// Check first if the temporary file exists
 	var p_info *string = getUserDataDirMODULES(mod_num).Add(_MOD_GEN_INFO_JSON_TMP).ReadFile()
@@ -466,19 +501,17 @@ func getModGenFileInfoMODULES[T any](mod_num int) (ModGenFileInfo[T], error) {
 		if nil == p_info {
 			// If not, write a new file
 
-			goto write_file
+			goto new_file
 		}
 	}
 
-	if FromJsonGENERAL([]byte(*p_info), &info) {
-		return info, nil
-	}
+	FromJsonGENERAL([]byte(*p_info), &modGenFileInfo)
 
-write_file:
+new_file:
 
-	info.Mod_num = mod_num
-	info.Run_info.Last_pid = -1
-	info.Run_info.Last_timestamp_ns = -1
+	modGenFileInfo.Mod_num = mod_num
+	modGenFileInfo.Run_info.Last_pid = curr_pid
+	modGenFileInfo.Run_info.Last_timestamp_ns = curr_ts
 
-	return info, info.Update()
+	return false, modGenFileInfo.Update(), modGenFileInfo
 }

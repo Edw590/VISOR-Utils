@@ -37,7 +37,9 @@ private to the package and only requested when absolutely necessary, like to com
 that require a string.
 */
 type GPath struct {
-	// s is the string that represents the path.
+	// p is the string that represents the path.
+	p string
+	// s is the character(s) that represents the path separator.
 	s string
 }
 
@@ -71,7 +73,7 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 
 		val_GPath, ok := sub_path.(GPath)
 		if ok {
-			sub_paths_str = append(sub_paths_str, val_GPath.s)
+			sub_paths_str = append(sub_paths_str, val_GPath.p)
 
 			continue
 		}
@@ -117,23 +119,26 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 	}
 
 	// The call to Join() is on purpose - it correctly joins *and cleans* the final path string.
-	var gPath GPath = GPath{filepath.Join(sub_paths_str...)}
+	var gPath GPath = GPath{
+		p: filepath.Join(sub_paths_str...),
+		s: path_separator,
+	}
 
 	// Replace all the OS path separators with the first path separator found in the subpaths, to keep the original path
 	// separator. Like if the path begins with "C:\" and the rest contains whatever separators, they need to be
 	// converted to "\" to work on Windows (just an example).
-	gPath.s = strings.Replace(gPath.s, string(os.PathSeparator), path_separator, -1)
+	gPath.p = strings.Replace(gPath.p, string(os.PathSeparator), gPath.s, -1)
 
 	// Check if the path represents a directory and if it does, make sure the path separator is at the end (especially
 	// since Join() removes it if it's there).
 	if gPath.Exists() {
-		if gPath.DescribesDir() && !strings.HasSuffix(gPath.s, path_separator) {
-			gPath.s += path_separator
+		if gPath.DescribesDir() && !strings.HasSuffix(gPath.p, gPath.s) {
+			gPath.p += gPath.s
 		}
 	} else {
 		// As last resort, check if it's a directory through the last character (project convention).
-		if ends_in_separator && !strings.HasSuffix(gPath.s, path_separator) {
-			gPath.s += path_separator
+		if ends_in_separator && !strings.HasSuffix(gPath.p, gPath.s) {
+			gPath.p += gPath.s
 		}
 	}
 
@@ -174,7 +179,7 @@ written in the GPath type), like to call Go official file/directory functions.
   - the GPath
 */
 func (gPath GPath) GPathToStringConversion() string {
-	return gPath.s
+	return gPath.p
 }
 
 /*
@@ -192,7 +197,7 @@ func (gPath GPath) ReadFile() *string {
 		return nil
 	}
 
-	data, err := os.ReadFile(gPath.s)
+	data, err := os.ReadFile(gPath.p)
 	if nil != err {
 		return nil
 	}
@@ -207,8 +212,8 @@ func (gPath GPath) ReadFile() *string {
 /*
 WriteTextFile writes the contents of a text file, creating it and any directories if necessary.
 
-Note: all line breaks are replaced by the OS line break(s). So for Windows, "\r" and "\n" are replaced by "\r\n" and for
-any other, "\r\n" and "\r" are replaced by "\n".
+Note: all line breaks are replaced with the OS line break(s). So for Windows, "\r" and "\n" are replaced with "\r\n" and
+for any other, "\r\n" and "\r" are replaced by "\n".
 
 -----------------------------------------------------------
 
@@ -233,7 +238,7 @@ func (gPath GPath) WriteTextFile(content string) error {
 }
 
 /*
-WriteFile writes the contents of a file, creating it and any directories if necessary.
+WriteFile writes the raw contents of a file, creating it and any directories if necessary.
 
 -----------------------------------------------------------
 
@@ -244,12 +249,12 @@ WriteFile writes the contents of a file, creating it and any directories if nece
   - nil if the file was written successfully, an error otherwise (including if the path describes a directory)
  */
 func (gPath GPath) WriteFile(content []byte) error {
-	if gPath.DescribesDir() || !gPath.CreateDir() {
+	if gPath.DescribesDir() || nil != gPath.Create(true) {
 		return nil
 	}
 
-	var err = os.WriteFile(gPath.s, content, 0o777)
-	_ = os.Chmod(gPath.s, 0o777)
+	var err = os.WriteFile(gPath.p, content, 0o777)
+	_ = os.Chmod(gPath.p, 0o777)
 
 	return err
 }
@@ -259,7 +264,7 @@ DescribesDir checks if a path DESCRIBES a directory or a file - means no matter 
 see it or not.
 
 It first checks if the path exists and if it does, checks if it's a directory or not - else it resorts to the path
-string only using the project convention in which a path that ends in a path separator is a directory and one that
+string only, using the project convention in which a path that ends in a path separator is a directory and one that
 doesn't is a file.
 
 -----------------------------------------------------------
@@ -268,12 +273,12 @@ doesn't is a file.
   - true if the path describes a directory, false if it describes a file
  */
 func (gPath GPath) DescribesDir() bool {
-	file_info, err := os.Stat(gPath.s)
+	file_info, err := os.Stat(gPath.p)
 	if nil == err {
 		return file_info.IsDir()
 	}
 
-	return strings.HasSuffix(gPath.GPathToStringConversion(), string(os.PathSeparator))
+	return strings.HasSuffix(gPath.GPathToStringConversion(), gPath.s)
 }
 
 /*
@@ -285,15 +290,15 @@ Exists checks if a path exists.
   - true if the path exists (meaning the program also has permissions to *see* the file), false otherwise
 */
 func (gPath GPath) Exists() bool {
-	_, err := os.Stat(gPath.s)
+	_, err := os.Stat(gPath.p)
 
 	if err != nil {
 		return false
 	}
 
 	if runtime.GOOS == "windows" {
-		if (strings.HasPrefix(gPath.s, "\\") && !strings.HasPrefix(gPath.s, "\\\\")) ||
-					(strings.HasPrefix(gPath.s, "/") && !strings.HasPrefix(gPath.s, "//")) {
+		if (strings.HasPrefix(gPath.p, "\\") && !strings.HasPrefix(gPath.p, "\\\\")) ||
+					(strings.HasPrefix(gPath.p, "/") && !strings.HasPrefix(gPath.p, "//")) {
 			// Apparently on Windows, /some/path is interpreted as C:\some\path, so we need to check if the path begins
 			// with \ or / (excluding \\ and //, which are interpreted as network paths).
 
@@ -305,41 +310,62 @@ func (gPath GPath) Exists() bool {
 }
 
 /*
-CreateDir creates a path and any necessary subdirectories in case they don't exist already, excluding the file if the
-path represents a file.
+Create creates a path and any necessary subdirectories in case they don't exist already.
 
 -----------------------------------------------------------
 
+– Params:
+  - also_file – if true, creates the file *too* if the path represents a file
+
 – Returns:
-  - true if the path was created successfully, false otherwise
- */
-func (gPath GPath) CreateDir() bool {
-	var path_list []string = strings.Split(gPath.s, string(os.PathSeparator))
+  - true if the complete path was created successfully, false otherwise
+*/
+func (gPath GPath) Create(create_file bool) error {
+	var path_list []string = strings.Split(gPath.p, gPath.s)
+	var describes_file bool = false
 	if !gPath.DescribesDir() {
-		// If the path is a file, remove the file part of the path from the list.
+		// If the path is a file, remove the file part of the file from the list so that it describes a directory only,
+		// but memorize if it describes a file.
+		describes_file = true
 		path_list = path_list[:len(path_list) - 1]
 	}
 
-	var current_path GPath = GPath{}
-	if strings.HasPrefix(gPath.s, string(os.PathSeparator)) {
-		current_path.s = string(os.PathSeparator)
-	}
-	for _, sub_path := range path_list {
-		if "" == sub_path {
-			continue
+	if !PathFILESDIRS(gPath.p[ : FindAllIndexesGENERAL(gPath.p, gPath.s)[len(path_list) - 1] + 1]).Exists() {
+		var current_path GPath = GPath{}
+		if strings.HasPrefix(gPath.p, gPath.s) {
+			current_path.p = gPath.s
 		}
+		for _, sub_path := range path_list {
+			if "" == sub_path {
+				continue
+			}
 
-		// Keep adding the subpaths until we reach the file part of the path.
-		current_path.s += sub_path + string(os.PathSeparator)
+			// Keep adding the subpaths until we reach the file part of the path, where the loop stops.
+			current_path.p += sub_path + gPath.s
 
-		if !current_path.Exists() {
-			if nil == os.Mkdir(current_path.s, 0o777) {
-				_ = os.Chmod(current_path.s, 0o777)
-			} else {
-				return false
+			if !current_path.Exists() {
+				if err := os.Mkdir(current_path.p, 0o777); nil == err {
+					_ = os.Chmod(current_path.p, 0o777)
+				} else {
+					return err
+				}
 			}
 		}
 	}
 
-	return true
+	// Create the file if the path represents a file.
+	if create_file && describes_file && !gPath.Exists() {
+		_, err := os.Create(gPath.p)
+		_ = os.Chmod(gPath.p, 0o777)
+
+		if nil != err {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (gPath GPath) Remove() error {
+	return os.Remove(gPath.p)
 }
