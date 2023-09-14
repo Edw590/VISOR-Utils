@@ -378,7 +378,7 @@ getProgramDataDirMODULES gets the full path to the program data directory of a m
   - the full path to the program data directory of the module
 */
 func getProgramDataDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(PersonalConsts_GL._VISOR_DIR, _PROGRAM_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return PersonalConsts_GL._VISOR_DIR.Add(_PROGRAM_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
@@ -393,7 +393,7 @@ getUserDataDirMODULES gets the full path to the private user data directory of a
   - the full path to the private data directory of the module
 */
 func getUserDataDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(PersonalConsts_GL._VISOR_DIR, _USER_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return PersonalConsts_GL._VISOR_DIR.Add(_USER_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*
@@ -408,7 +408,7 @@ getModTempDirMODULES gets the full path to the private temporary directory of a 
   - the full path to the private temporary directory of the module
 */
 func getModTempDirMODULES(mod_num int) GPath {
-	return PathFILESDIRS(PersonalConsts_GL._VISOR_DIR, _TEMP_FOLDER, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
+	return PersonalConsts_GL._VISOR_DIR.Add(_TEMP_FOLDER, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num) + "/")
 }
 
 /*

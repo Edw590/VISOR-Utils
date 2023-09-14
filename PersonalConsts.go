@@ -42,7 +42,7 @@ type personalConstsEOG struct {
 // PersonalConsts is a struct containing the constants that are personal to the user.
 type PersonalConsts struct {
 	// _VISOR_DIR is the full path to the main directory of VISOR.
-	_VISOR_DIR string
+	_VISOR_DIR GPath
 
 	// _VISOR_EMAIL_ADDR is VISOR's email address
 	_VISOR_EMAIL_ADDR string
@@ -75,7 +75,8 @@ func (personalConsts *PersonalConsts) init() error {
 
 	// Set the global variables
 
-	personalConsts._VISOR_DIR = struct_file_format.VISOR_DIR
+	// Ending _VISOR_DIR with a slash to be sure it's there (as it should - it's a directory)
+	personalConsts._VISOR_DIR = PathFILESDIRS(struct_file_format.VISOR_DIR + "/")
 
 	personalConsts._VISOR_EMAIL_ADDR = struct_file_format.VISOR_EMAIL_ADDR
 	personalConsts._VISOR_EMAIL_PW = struct_file_format.VISOR_EMAIL_PW
@@ -87,7 +88,7 @@ func (personalConsts *PersonalConsts) init() error {
 		return errors.New("Some fields in " + PERSONAL_CONSTS_FILE + " are empty! Aborting...")
 	}
 
-	var visor_path GPath = PathFILESDIRS(personalConsts._VISOR_DIR)
+	var visor_path GPath = personalConsts._VISOR_DIR
 	if !visor_path.Exists() || !visor_path.DescribesDir() {
 		return errors.New("The VISOR directory \"" + visor_path.GPathToStringConversion() + "\" does not exist! Aborting...")
 	}

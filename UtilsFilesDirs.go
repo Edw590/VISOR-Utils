@@ -42,6 +42,9 @@ type GPath struct {
 	p string
 	// s just maps to the OS path separator.
 	s string
+	// dir is true if the path *describes* a directory, false if it *describes* a file (no matter if it exists and we
+	// have permissions to read it or not).
+	dir bool
 }
 
 /*
@@ -107,11 +110,12 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 		p:   filepath.Join(sub_paths_str...),
 		s:   string(os.PathSeparator),
 	}
+	gPath.dir = gPath.DescribesDir()
 
 	// Check if the path represents a directory and if it does, make sure the path separator is at the end (especially
 	// since Join() removes it if it's there).
 	if gPath.Exists() {
-		if gPath.DescribesDir() && !strings.HasSuffix(gPath.p, gPath.s) {
+		if gPath.dir && !strings.HasSuffix(gPath.p, gPath.s) {
 			gPath.p += gPath.s
 		}
 	} else {
@@ -172,7 +176,7 @@ Note: all line breaks are replaced by "\n" for internal use, just like Python do
   - the contents of the file or nil if an error occurs (including if the path describes a directory)
  */
 func (gPath GPath) ReadFile() *string {
-	if gPath.DescribesDir() || !gPath.Exists() {
+	if gPath.dir || !gPath.Exists() {
 		return nil
 	}
 
@@ -228,7 +232,7 @@ WriteFile writes the raw contents of a file, creating it and any directories if 
   - nil if the file was written successfully, an error otherwise (including if the path describes a directory)
  */
 func (gPath GPath) WriteFile(content []byte) error {
-	if gPath.DescribesDir() || nil != gPath.Create(true) {
+	if gPath.dir || nil != gPath.Create(true) {
 		return nil
 	}
 
@@ -295,7 +299,7 @@ func (gPath GPath) Create(create_file bool) error {
 
 	var path_list []string = strings.Split(gPath.p, gPath.s)
 	var describes_file bool = false
-	if !gPath.DescribesDir() {
+	if !gPath.dir {
 		// If the path is a file, remove the file part of the file from the list so that it describes a directory only,
 		// but memorize if it describes a file.
 		describes_file = true
