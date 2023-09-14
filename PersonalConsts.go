@@ -87,8 +87,9 @@ func (personalConsts *PersonalConsts) init() error {
 		return errors.New("Some fields in " + PERSONAL_CONSTS_FILE + " are empty! Aborting...")
 	}
 
-	if !PathFILESDIRS(personalConsts._VISOR_DIR).Exists() || !PathFILESDIRS(personalConsts._VISOR_DIR).DescribesDir() {
-		return errors.New("The VISOR directory \"" + personalConsts._VISOR_DIR + "\" does not exist! Aborting...")
+	var visor_path GPath = PathFILESDIRS(personalConsts._VISOR_DIR)
+	if !visor_path.Exists() || !visor_path.DescribesDir() {
+		return errors.New("The VISOR directory \"" + visor_path.GPathToStringConversion() + "\" does not exist! Aborting...")
 	}
 
 	return nil

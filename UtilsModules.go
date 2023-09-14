@@ -143,6 +143,10 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 	var errs bool = false
 	Tcef.Tcef{
 		Try: func() {
+			// Module startup routine //
+			mod_name = GetModNameMODULES(mod_num)
+			printStartupSequenceMODULES(mod_name)
+
 			// Initialize the personal "constants"
 			err := PersonalConsts_GL.init()
 			if err != nil {
@@ -151,10 +155,6 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 
 				return
 			}
-
-			// Module startup routine //
-			mod_name = GetModNameMODULES(mod_num)
-			printStartupSequenceMODULES(mod_name)
 
 			exit, err, modGenFileInfo := processModRunningMODULES[T](mod_num)
 			if nil != err {

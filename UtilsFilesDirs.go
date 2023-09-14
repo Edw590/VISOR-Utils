@@ -22,6 +22,7 @@
 package Utils
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -39,7 +40,7 @@ that require a string.
 type GPath struct {
 	// p is the string that represents the path.
 	p string
-	// s is the character(s) that represents the path separator.
+	// s just maps to the OS path separator.
 	s string
 }
 
@@ -86,30 +87,13 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 		return GPath{}
 	}
 
-	// Get the first path separator found in the subpaths.
-	var path_separator string = ""
-
 	// Replace all the path separators with the OS path separator.
 	for i, sub_path := range sub_paths_str {
-		if path_separator == "" {
-			for _, char := range sub_path {
-				if "/" == string(char) || "\\" == string(char) {
-					path_separator = string(char)
-
-					break
-				}
-			}
-		}
-
 		// Replace all the path separators with the OS path separator for Join() to work (only works with the OS one).
 		sub_path = strings.Replace(sub_path, "/", string(os.PathSeparator), -1)
 		sub_path = strings.Replace(sub_path, "\\", string(os.PathSeparator), -1)
 
 		sub_paths_str[i] = sub_path
-	}
-	if path_separator == "" {
-		// If no path separator was found, use the OS path separator.
-		path_separator = string(os.PathSeparator)
 	}
 
 	// Check if the last subpath ends in a path separator before calling Join() which will remove it if it's there.
@@ -120,14 +104,9 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 
 	// The call to Join() is on purpose - it correctly joins *and cleans* the final path string.
 	var gPath GPath = GPath{
-		p: filepath.Join(sub_paths_str...),
-		s: path_separator,
+		p:   filepath.Join(sub_paths_str...),
+		s:   string(os.PathSeparator),
 	}
-
-	// Replace all the OS path separators with the first path separator found in the subpaths, to keep the original path
-	// separator. Like if the path begins with "C:\" and the rest contains whatever separators, they need to be
-	// converted to "\" to work on Windows (just an example).
-	gPath.p = strings.Replace(gPath.p, string(os.PathSeparator), gPath.s, -1)
 
 	// Check if the path represents a directory and if it does, make sure the path separator is at the end (especially
 	// since Join() removes it if it's there).
@@ -193,7 +172,7 @@ Note: all line breaks are replaced by "\n" for internal use, just like Python do
   - the contents of the file or nil if an error occurs (including if the path describes a directory)
  */
 func (gPath GPath) ReadFile() *string {
-	if gPath.DescribesDir() {
+	if gPath.DescribesDir() || !gPath.Exists() {
 		return nil
 	}
 
@@ -290,23 +269,12 @@ Exists checks if a path exists.
   - true if the path exists (meaning the program also has permissions to *see* the file), false otherwise
 */
 func (gPath GPath) Exists() bool {
-	_, err := os.Stat(gPath.p)
-
-	if err != nil {
+	if nil != gPath.IsSupported() {
 		return false
 	}
 
-	if runtime.GOOS == "windows" {
-		if (strings.HasPrefix(gPath.p, "\\") && !strings.HasPrefix(gPath.p, "\\\\")) ||
-					(strings.HasPrefix(gPath.p, "/") && !strings.HasPrefix(gPath.p, "//")) {
-			// Apparently on Windows, /some/path is interpreted as C:\some\path, so we need to check if the path begins
-			// with \ or / (excluding \\ and //, which are interpreted as network paths).
-
-			return false
-		}
-	}
-
-	return true
+	_, err := os.Stat(gPath.p)
+	return nil == err
 }
 
 /*
@@ -318,9 +286,13 @@ Create creates a path and any necessary subdirectories in case they don't exist 
   - also_file – if true, creates the file *too* if the path represents a file
 
 – Returns:
-  - true if the complete path was created successfully, false otherwise
+  - nil if the path was created successfully, an error otherwise
 */
 func (gPath GPath) Create(create_file bool) error {
+	if err := gPath.IsSupported(); nil != err {
+		return err
+	}
+
 	var path_list []string = strings.Split(gPath.p, gPath.s)
 	var describes_file bool = false
 	if !gPath.DescribesDir() {
@@ -366,6 +338,52 @@ func (gPath GPath) Create(create_file bool) error {
 	return nil
 }
 
+/*
+Remove removes a file or directory.
+
+-----------------------------------------------------------
+
+– Returns:
+  - nil if the file or directory was removed successfully, an error otherwise
+ */
 func (gPath GPath) Remove() error {
+	if err := gPath.IsSupported(); nil != err {
+		return err
+	}
+
 	return os.Remove(gPath.p)
+}
+
+/*
+IsSupported checks if the path is supported by the current OS.
+
+-----------------------------------------------------------
+
+– Returns:
+  - nil if the path is supported by the current OS, false otherwise
+*/
+func (gPath GPath) IsSupported() error {
+	// If the path is relative, it works everywhere (it's not specific to any OS). If it's absolute, it's supported
+	// if it's an absolute path for the current OS.
+
+	// Note: can't check with filepath.IsAbs() because it returns false for paths that are not supported by the current
+	// OS, but are absolute for another OS. So the check must be made manually.
+
+	// Check if the path is the wrong absolute type for the current OS. Else it's supported.
+	// Don't forget the separators are changed to the current OS ones, so the checks are "inverted".
+	if "windows" == runtime.GOOS {
+		// Then check if it's a Linux absolute path.
+		if strings.HasPrefix(gPath.p, "\\") {
+			return errors.New("the path is not supported by the current OS")
+		}
+	} else {
+		// Then check if it's a Windows absolute path.
+		if len(gPath.p) >= 2 && (((gPath.p[0] >= 'a' && gPath.p[0] <= 'z' || gPath.p[0] >= 'A' && gPath.p[0] <= 'Z') && gPath.p[1] == ':') ||
+					strings.HasPrefix(gPath.p, "//")) {
+			return errors.New("the path is not supported by the current OS")
+		}
+	}
+	// Else it's relative or absolute for the current OS.
+
+	return nil
 }
