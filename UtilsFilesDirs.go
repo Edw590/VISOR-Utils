@@ -40,22 +40,22 @@ that require a string.
 type GPath struct {
 	// p is the string that represents the path.
 	p string
-	// s just maps to the OS path separator.
+	// s is the path separator of the path
 	s string
-	// dir is true if the path *describes* a directory, false if it *describes* a file (no matter if it exists and we
-	// have permissions to read it or not).
+	// dir is true if the path *describes* a directory, false if it *describes* a file (means no matter if it exists and
+	// we have permissions to read it or not).
 	dir bool
 }
 
 /*
-PathFILESDIRS combines a path from the given subpaths of type string or GPath (ONLY), always ending a directory path
-with the OS path separator.
+PathFILESDIRS combines a path from the given subpaths of type string or GPath (ONLY) into a GPath.
 
-Note: the final path separator is the first one found in the subpaths, or the OS path separator if none is found.
+Note: the path separators used are always converted to the OS ones.
 
-To end a path to a directory, ALWAYS end with a path separator (important project convention) and is the only
-way to know if the path is a directory or not in case: there are no permissions to access it; it doesn't exist;
-it's a relative path - various functions here depend on this convention in these listed cases!
+If you give the path to a directory to this function, make sure to ALWAYS end it with a path separator (important
+project convention). It's the only way to know if the path is a directory or not in case: there are no permissions to
+access it; it doesn't exist; it's a relative path. Else it's impossible to know if it's describing a directory or not.
+Various functions here depend on this convention in these listed cases!
 
 -----------------------------------------------------------
 
@@ -65,7 +65,7 @@ it's a relative path - various functions here depend on this convention in these
 – Returns:
   - the final path as a GPath
 */
-func PathFILESDIRS(sub_paths ...any) GPath {
+func PathFILESDIRS(separator string, sub_paths ...any) GPath {
 	var sub_paths_str []string = nil
 	for _, sub_path := range sub_paths {
 		val_str, ok := sub_path.(string)
@@ -105,21 +105,27 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 		ends_in_separator = true
 	}
 
-	// The call to Join() is on purpose - it correctly joins *and cleans* the final path string.
+	if "" == separator {
+		separator = string(os.PathSeparator)
+	}
+
+	// The call to Join() is on purpose - it correctly joins *and cleans* the final path string (only if it's used with
+	// the OS path separator - which is always the case).
 	var gPath GPath = GPath{
-		p:   filepath.Join(sub_paths_str...),
-		s:   string(os.PathSeparator),
+		p:   strings.Replace(filepath.Join(sub_paths_str...), string(os.PathSeparator), separator, -1),
+		s:   separator,
+		dir: false,
 	}
 	gPath.dir = gPath.DescribesDir()
 
-	// Check if the path represents a directory and if it does, make sure the path separator is at the end (especially
+	// Check if the path describes a directory and if it does, make sure the path separator is at the end (especially
 	// since Join() removes it if it's there).
 	if gPath.Exists() {
 		if gPath.dir && !strings.HasSuffix(gPath.p, gPath.s) {
 			gPath.p += gPath.s
 		}
 	} else {
-		// As last resort, check if it's a directory through the last character (project convention).
+		// As last resort, check through the last character on the subpaths list (project convention).
 		if ends_in_separator && !strings.HasSuffix(gPath.p, gPath.s) {
 			gPath.p += gPath.s
 		}
@@ -129,7 +135,31 @@ func PathFILESDIRS(sub_paths ...any) GPath {
 }
 
 /*
-Add adds subpaths to a path.
+Add adds subpaths to a path using the given path separator.
+
+-----------------------------------------------------------
+
+– Params:
+  - separator – the path separator to use
+  - sub_paths – the subpaths to add
+
+– Returns:
+  - the final path as a GPath
+*/
+func (gPath GPath) Add(separator rune, sub_paths ...any) GPath {
+	// Create a temporary slice with the first element + the subpaths, all in a 1D slice and all as the 1st parameter
+	// of the Path function.
+	var tmp []any = append([]any{gPath}, sub_paths...)
+
+	var separator_tmp string = string(separator)
+	if 0xFF == separator {
+		separator_tmp = ""
+	}
+	return PathFILESDIRS(separator_tmp, tmp...)
+}
+
+/*
+Add2 is a wrapper of Add() using the default path separator.
 
 -----------------------------------------------------------
 
@@ -139,12 +169,8 @@ Add adds subpaths to a path.
 – Returns:
   - the final path as a GPath
  */
-func (gPath GPath) Add(sub_paths ...any) GPath {
-	// Create a temporary slice with the first element + the subpaths, all in a 1D slice and all as the 1st parameter
-	// of the Path function.
-	var temp []any = append([]any{gPath}, sub_paths...)
-
-	return PathFILESDIRS(temp...)
+func (gPath GPath) Add2(sub_paths ...any) GPath {
+	return gPath.Add(0xFF, sub_paths...)
 }
 
 /*
@@ -306,7 +332,7 @@ func (gPath GPath) Create(create_file bool) error {
 		path_list = path_list[:len(path_list) - 1]
 	}
 
-	if !PathFILESDIRS(gPath.p[ : FindAllIndexesGENERAL(gPath.p, gPath.s)[len(path_list) - 1] + 1]).Exists() {
+	if !PathFILESDIRS("", gPath.p[:FindAllIndexesGENERAL(gPath.p, gPath.s)[len(path_list) - 1] + 1]).Exists() {
 		var current_path GPath = GPath{}
 		if strings.HasPrefix(gPath.p, gPath.s) {
 			current_path.p = gPath.s
@@ -390,4 +416,16 @@ func (gPath GPath) IsSupported() error {
 	// Else it's relative or absolute for the current OS.
 
 	return nil
+}
+
+/*
+GetBinDirMODULES gets the full path to the directory of the binaries.
+
+-----------------------------------------------------------
+
+– Returns:
+  - the full path to the directory of the binaries
+*/
+func GetBinDirMODULES() GPath {
+	return PersonalConsts_GL._VISOR_DIR.Add2(_BIN_REL_DIR)
 }

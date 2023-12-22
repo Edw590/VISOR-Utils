@@ -23,6 +23,7 @@ package Utils
 
 import (
 	"os"
+	"os/exec"
 	"runtime"
 	"syscall"
 )
@@ -55,4 +56,41 @@ func IsPidRunningPROCESSES(pid int) bool {
 	} else {
 		return false
 	}
+}
+
+/*
+StartProcessPROCESSES starts a new separate process with the given path.
+
+-----------------------------------------------------------
+
+– Params:
+  - path – the path of the program to start
+
+– Returns:
+  - true if the process was started, false otherwise
+ */
+func StartProcessPROCESSES(path GPath) bool {
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("powershell.exe", "/C", "start", path.GPathToStringConversion())
+		err := cmd.Start()
+		if err != nil {
+			return false
+		}
+		err = cmd.Process.Release()
+		if err != nil {
+			return false
+		}
+	} else {
+		cmd := exec.Command("sh", "-c", path.GPathToStringConversion(), "&")
+		err := cmd.Start()
+		if err != nil {
+			return false
+		}
+		err = cmd.Process.Release()
+		if err != nil {
+			return false
+		}
+	}
+
+	return true
 }

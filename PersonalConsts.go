@@ -76,7 +76,7 @@ func (personalConsts *PersonalConsts) init() error {
 	// Set the global variables
 
 	// Ending _VISOR_DIR with a slash to be sure it's there (as it should - it's a directory)
-	personalConsts._VISOR_DIR = PathFILESDIRS(struct_file_format.VISOR_DIR + "/")
+	personalConsts._VISOR_DIR = PathFILESDIRS("", struct_file_format.VISOR_DIR + "/")
 
 	personalConsts._VISOR_EMAIL_ADDR = struct_file_format.VISOR_EMAIL_ADDR
 	personalConsts._VISOR_EMAIL_PW = struct_file_format.VISOR_EMAIL_PW
@@ -89,7 +89,7 @@ func (personalConsts *PersonalConsts) init() error {
 	}
 
 	var visor_path GPath = personalConsts._VISOR_DIR
-	if !visor_path.Exists() || !visor_path.DescribesDir() {
+	if !visor_path.Exists() {
 		return errors.New("The VISOR directory \"" + visor_path.GPathToStringConversion() + "\" does not exist! Aborting...")
 	}
 

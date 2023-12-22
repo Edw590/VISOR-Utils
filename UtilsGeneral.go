@@ -178,6 +178,9 @@ FromJsonGENERAL minifies and parses the given JSON data.
 
 All the needed fields of the struct must be exported like with json.Marshal().
 
+This function supports minifying the JSON data and removing the last comma after the last element of the JSON array in
+it exists (rendering the JSON invalid).
+
 -----------------------------------------------------------
 
 – Params:
@@ -188,16 +191,28 @@ All the needed fields of the struct must be exported like with json.Marshal().
   - true if the data was parsed correctly, false otherwise
 */
 func FromJsonGENERAL(json_data []byte, parsed_data any) bool {
-	var json_final []byte = nil
-	var json_min, err = jsmin.Minify(json_data)
-	if nil == err {
-		json_final = json_min
-	} else {
-		// If the minifier fails, try to parse the original JSON (probably won't work, but I'll let Unmarshal() decide).
-		json_final = json_data
+	var json_final []byte = json_data
+	for i := 0; i < 2; i++ {
+		var json_min, err = jsmin.Minify(json_final)
+		if nil == err {
+			json_final = json_min
+		} else {
+			// If the minifier fails, try to parse the original JSON (probably won't work, but I'll let Unmarshal()
+			// decide).
+		}
+
+		if nil != json.Unmarshal(json_final, parsed_data) {
+			if 0 == i {
+				// Remove the last comma after the last element of the JSON array and try again (in case the problem is
+				// a trailing comma somewhere).
+				DelElemSLICES(&json_final, strings.LastIndex(string(json_final), ","))
+			} else {
+				return false
+			}
+		}
 	}
 
-	return nil == json.Unmarshal(json_final, parsed_data)
+	return true
 }
 
 /*

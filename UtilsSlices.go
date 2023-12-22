@@ -30,6 +30,8 @@ import (
 /*
 DelElemSLICES removes an element from a slice by its index.
 
+If the index is out of range (index < 0 || index >= len(slice)), nothing happens.
+
 Credits to https://stackoverflow.com/a/56591107/8228163 (optimized here).
 
 -----------------------------------------------------------
@@ -39,11 +41,18 @@ Credits to https://stackoverflow.com/a/56591107/8228163 (optimized here).
   - index – the index of the element to remove
 
 – Returns:
-  - nothing
+  - true if the element was removed, false otherwise
 */
-func DelElemSLICES(slice any, index int) {
+func DelElemSLICES(slice any, index int) bool {
 	var slice_value reflect.Value = reflect.ValueOf(slice).Elem()
+
+	if index < 0 || index >= slice_value.Len() {
+		return false
+	}
+
 	slice_value.Set(reflect.AppendSlice(slice_value.Slice(0, index), slice_value.Slice(index+1, slice_value.Len())))
+
+	return true
 }
 
 /*

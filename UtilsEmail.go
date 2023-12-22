@@ -32,7 +32,7 @@ import (
 // EmailInfo is the info needed to send an email through QueueEmail().
 type EmailInfo struct {
 	// Sender name (can be anything)
-	Sender  string
+	Sender string
 	// Mail_to is the email address to send the email to.
 	Mail_to string
 	// Subject of the email.
@@ -50,6 +50,42 @@ type Multipart struct {
 	Content_id                string
 	Body                      string
 }
+
+const (
+	MODEL_INFO_MSG_BODY_EMAIL  string = "|3234_MSG_BODY|"
+	MODEL_INFO_DATE_TIME_EMAIL string = "|3234_DATE_TIME|"
+
+	MODEL_RSS_ENTRY_TITLE_EMAIL       string = "|3234_ENTRY_TITLE|"
+	MODEL_RSS_ENTRY_AUTHOR_EMAIL      string = "|3234_ENTRY_AUTHOR|"
+	MODEL_RSS_ENTRY_DESCRIPTION_EMAIL string = "|3234_ENTRY_DESCRIPTION|"
+	MODEL_RSS_ENTRY_URL_EMAIL         string = "|3234_ENTRY_URL|"
+	MODEL_RSS_ENTRY_PUB_DATE_EMAIL    string = "|3234_ENTRY_PUB_DATE|"
+	MODEL_RSS_ENTRY_UPD_DATE_EMAIL    string = "|3234_ENTRY_UPD_DATE|"
+
+	MODEL_YT_VIDEO_HTML_TITLE_EMAIL        string = "|3234_HTML_TITLE|"
+	MODEL_YT_VIDEO_CHANNEL_NAME_EMAIL      string = "|3234_CHANNEL_NAME|"
+	MODEL_YT_VIDEO_CHANNEL_CODE_EMAIL      string = "|3234_CHANNEL_CODE|"
+	MODEL_YT_VIDEO_CHANNEL_IMAGE_EMAIL     string = "|3234_CHANNEL_IMAGE|"
+	MODEL_YT_VIDEO_VIDEO_TITLE_EMAIL       string = "|3234_VIDEO_TITLE|"
+	MODEL_YT_VIDEO_VIDEO_DESCRIPTION_EMAIL string = "|3234_VIDEO_DESCRIPTION|"
+	MODEL_YT_VIDEO_VIDEO_CODE_EMAIL        string = "|3234_VIDEO_CODE|"
+	MODEL_YT_VIDEO_VIDEO_IMAGE_EMAIL       string = "|3234_VIDEO_IMAGE|"
+	MODEL_YT_VIDEO_VIDEO_TIME_EMAIL        string = "|3234_VIDEO_TIME|"
+	MODEL_YT_VIDEO_VIDEO_TIME_COLOR_EMAIL  string = "|3234_VIDEO_TIME_COLOR|"
+	MODEL_YT_VIDEO_PLAYLIST_CODE_EMAIL     string = "|3234_PLAYLIST_CODE|"
+	MODEL_YT_VIDEO_SUBSCRIPTION_LINK_EMAIL string = "|3234_SUBSCRIPTION_LINK|"
+	MODEL_YT_VIDEO_SUBSCRIPTION_NAME_EMAIL string = "|3234_SUBSCRIPTION_NAME|"
+
+	MODEL_DISKS_SMART_PROBLEMS_DETECTED_EMAIL string = "|3234_PROBLEMS_DETECTED|"
+	MODEL_DISKS_SMART_ERROR_REPORT_EMAIL      string = "|3234_ERROR_REPORT|"
+	MODEL_DISKS_SMART_DATE_TIME_START_EMAIL   string = "|3234_DATE_TIME_START|"
+	MODEL_DISKS_SMART_DATE_TIME_END_EMAIL     string = "|3234_DATE_TIME_END|"
+	MODEL_DISKS_SMART_DISK_LABEL_EMAIL        string = "|3234_DISK_LABEL|"
+	MODEL_DISKS_SMART_DISK_SERIAL_EMAIL       string = "|3234_DISK_SERIAL|"
+	MODEL_DISKS_SMART_DISK_PARTITION_EMAIL    string = "|3234_DISK_PARTITION|"
+	MODEL_DISKS_SMART_DISKS_SMART_HTML_EMAIL  string = "|3234_DISKS_SMART_HTML|"
+
+)
 
 const RAND_STR_LEN int = 10
 
@@ -70,12 +106,36 @@ GetModelFileEMAIL returns the contents of an email model file.
 
 – Params:
   - file_name – the name of the file
+  - things_replace – the map of things to replace in the file
 
 – Returns:
-  - the contents of the file or nil if an error occurred
+  - an instance of EmailInfo with the EmailInfo.Sender, EmailInfo.Mail_to and EmailInfo.Html filled and ready
 */
-func GetModelFileEMAIL(file_name string) *string {
-	return getProgramDataDirMODULES(NUM_MOD_EmailSender).Add(_EMAIL_MODELS_FOLDER, file_name).ReadFile()
+func GetModelFileEMAIL(file_name string, things_replace map[string]string) EmailInfo {
+	var sender string
+	switch file_name {
+		case MODEL_FILE_INFO:
+			sender = "VISOR - Info"
+		case MODEL_FILE_RSS:
+			sender = "VISOR - RSS"
+		case MODEL_FILE_YT_VIDEO:
+			sender = "YouTube"
+		case MODEL_FILE_DISKS_SMART:
+			sender = "VISOR - S.M.A.R.T."
+	}
+
+	var msg_html string = *getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, file_name).ReadFile()
+	for key, value := range things_replace {
+		msg_html = strings.ReplaceAll(msg_html, key, value)
+	}
+
+	return EmailInfo{
+		Sender:     sender,
+		Mail_to:    PersonalConsts_GL.USER_EMAIL_ADDR,
+		Subject:    "",
+		Html:       msg_html,
+		Multiparts: nil,
+	}
 }
 
 /*
@@ -104,16 +164,16 @@ func QueueEmailEMAIL(emailInfo EmailInfo) error {
 	}
 
 	var file_name string = ""
-	var to_send_dir GPath = getUserDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER)
+	var to_send_dir GPath = getUserDataDirMODULES(NUM_MOD_EmailSender).Add2(TO_SEND_REL_FOLDER)
 	for {
 		var rand_string string = RandStringGENERAL(RAND_STR_LEN)
-		_, err := os.ReadFile(to_send_dir.Add(rand_string + emailInfo.Mail_to + ".eml").
+		_, err := os.ReadFile(to_send_dir.Add2(rand_string + emailInfo.Mail_to + ".eml").
 			GPathToStringConversion())
 		if nil != err {
 			// If the file doesn't exist, choose that name.
 			file_name = rand_string + emailInfo.Mail_to + ".eml"
 
-			return getUserDataDirMODULES(NUM_MOD_EmailSender).Add(TO_SEND_REL_FOLDER + file_name).
+			return getUserDataDirMODULES(NUM_MOD_EmailSender).Add2(TO_SEND_REL_FOLDER + file_name).
 				WriteTextFile(message_eml)
 		}
 	}
@@ -136,10 +196,10 @@ SendEmailEMAIL sends an email with the given message and receiver.
   - nil if the email was sent successfully, otherwise an error
 */
 func SendEmailEMAIL(message_eml string, mail_to string, emergency_email bool) error {
-	if err := getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).WriteTextFile(message_eml); nil != err {
+	if err := getModTempDirMODULES(NUM_MOD_EmailSender).Add2(_TEMP_EML_FILE).WriteTextFile(message_eml); nil != err {
 		return err
 	}
-	_, err := ExecCmdSHELL(getCurlStringEMAIL(mail_to, emergency_email))
+	_, err := ExecCmdSHELL([]string{getCurlStringEMAIL(mail_to, emergency_email)})
 
 	return err
 }
@@ -186,23 +246,23 @@ prepareEmlEMAIL prepares the EML file of the email.
   - nil if the email was queued successfully, otherwise an error
 */
 func prepareEmlEMAIL(emailInfo EmailInfo) (string, string, bool) {
-	var p_message_eml *string = GetModelFileEMAIL(_MODEL_FILE_MESSAGE_EML)
+	var p_message_eml *string = getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, _MODEL_FILE_MESSAGE_EML).ReadFile()
 	if p_message_eml == nil {
 		return "", "", false
 	}
 	var message_eml string = *p_message_eml
 
-	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_MSG_SUBJECT|", emailInfo.Subject)
-	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_MSG_SENDER_NAME|", emailInfo.Sender)
+	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_EML_SUBJECT|", emailInfo.Subject)
+	emailInfo.Html = strings.ReplaceAll(emailInfo.Html, "|3234_EML_SENDER_NAME|", emailInfo.Sender)
 
-	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_HTML|", *ToQuotedPrintableEMAIL(emailInfo.Html))
-	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_SUBJECT|", emailInfo.Subject)
-	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_SENDER_NAME|", emailInfo.Sender)
+	message_eml = strings.ReplaceAll(message_eml, "|3234_EML_HTML|", *ToQuotedPrintableEMAIL(emailInfo.Html))
+	message_eml = strings.ReplaceAll(message_eml, "|3234_EML_SUBJECT|", emailInfo.Subject)
+	message_eml = strings.ReplaceAll(message_eml, "|3234_EML_SENDER_NAME|", emailInfo.Sender)
 
 	var multiparts_str string = ""
 	if nil != emailInfo.Multiparts {
 		for _, multipart := range emailInfo.Multiparts {
-			multiparts_str += "\n--|3234_MSG_BOUNDARY|\n" +
+			multiparts_str += "\n--|3234_EML_BOUNDARY|\n" +
 						"Content-Type: " + multipart.Content_type + "\n" +
 						"Content-Transfer-Encoding: " + multipart.Content_transfer_encoding + "\n" +
 						"Content-ID: <" + multipart.Content_id + ">\n" +
@@ -210,7 +270,7 @@ func prepareEmlEMAIL(emailInfo EmailInfo) (string, string, bool) {
 						multipart.Body + "\n\n"
 		}
 	}
-	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_MULTIPARTS|", multiparts_str)
+	message_eml = strings.ReplaceAll(message_eml, "|3234_EML_MULTIPARTS|", multiparts_str)
 
 	var msg_boundary string = RandStringGENERAL(25)
 	for {
@@ -219,7 +279,7 @@ func prepareEmlEMAIL(emailInfo EmailInfo) (string, string, bool) {
 		}
 		msg_boundary = RandStringGENERAL(25)
 	}
-	message_eml = strings.ReplaceAll(message_eml, "|3234_MSG_BOUNDARY|", msg_boundary)
+	message_eml = strings.ReplaceAll(message_eml, "|3234_EML_BOUNDARY|", msg_boundary)
 
 
 	return message_eml, emailInfo.Mail_to, true
@@ -246,6 +306,6 @@ func getCurlStringEMAIL(mail_to string, emergency_email bool) string {
 
 	return "curl{{EXE}} --location --connect-timeout " + timeout + " --verbose \"smtp://smtp.gmail.com:587\" --user \"" +
 		PersonalConsts_GL._VISOR_EMAIL_ADDR + ":" + PersonalConsts_GL._VISOR_EMAIL_PW + "\" --mail-rcpt \"" + mail_to +
-		"\" --upload-file \"" + getModTempDirMODULES(NUM_MOD_EmailSender).Add(_TEMP_EML_FILE).GPathToStringConversion() +
+		"\" --upload-file \"" + getModTempDirMODULES(NUM_MOD_EmailSender).Add2(_TEMP_EML_FILE).GPathToStringConversion() +
 		"\" --ssl-reqd"
 }
