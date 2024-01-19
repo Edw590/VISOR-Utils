@@ -29,8 +29,8 @@ import (
 
 var PersonalConsts_GL PersonalConsts = PersonalConsts{}
 
-// personalConstsEOG is the internal struct with the format of the PersonalConsts_EOG.json file.
-type personalConstsEOG struct {
+// _PersonalConstsEOG is the internal struct with the format of the PersonalConsts_EOG.json file.
+type _PersonalConstsEOG struct {
 	VISOR_DIR string
 
 	VISOR_EMAIL_ADDR string
@@ -68,7 +68,7 @@ func (personalConsts *PersonalConsts) init() error {
 		return errors.New("No " + PERSONAL_CONSTS_FILE + " file found in the current working directory: \"" + cwd + "\"! Aborting...")
 	}
 
-	var struct_file_format personalConstsEOG
+	var struct_file_format _PersonalConstsEOG
 	if !FromJsonGENERAL(bytes, &struct_file_format) {
 		return errors.New("file " + PERSONAL_CONSTS_FILE + " file is corrupted! Aborting...")
 	}

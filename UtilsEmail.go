@@ -124,7 +124,7 @@ func GetModelFileEMAIL(file_name string, things_replace map[string]string) Email
 			sender = "VISOR - S.M.A.R.T."
 	}
 
-	var msg_html string = *getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, file_name).ReadFile()
+	var msg_html string = *getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, file_name).ReadTextFile()
 	for key, value := range things_replace {
 		msg_html = strings.ReplaceAll(msg_html, key, value)
 	}
@@ -246,7 +246,7 @@ prepareEmlEMAIL prepares the EML file of the email.
   - nil if the email was queued successfully, otherwise an error
 */
 func prepareEmlEMAIL(emailInfo EmailInfo) (string, string, bool) {
-	var p_message_eml *string = getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, _MODEL_FILE_MESSAGE_EML).ReadFile()
+	var p_message_eml *string = getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, _MODEL_FILE_MESSAGE_EML).ReadTextFile()
 	if p_message_eml == nil {
 		return "", "", false
 	}

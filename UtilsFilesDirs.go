@@ -192,7 +192,7 @@ func (gPath GPath) GPathToStringConversion() string {
 }
 
 /*
-ReadFile reads the contents of a file.
+ReadTextFile reads the contents of a file.
 
 Note: all line breaks are replaced by "\n" for internal use, just like Python does.
 
@@ -200,8 +200,8 @@ Note: all line breaks are replaced by "\n" for internal use, just like Python do
 
 – Returns:
   - the contents of the file or nil if an error occurs (including if the path describes a directory)
- */
-func (gPath GPath) ReadFile() *string {
+*/
+func (gPath GPath) ReadTextFile() *string {
 	if gPath.dir || !gPath.Exists() {
 		return nil
 	}
@@ -216,6 +216,27 @@ func (gPath GPath) ReadFile() *string {
 	ret = strings.ReplaceAll(ret, "\r", "\n")
 
 	return &ret
+}
+
+/*
+ReadFile reads the raw contents of a file.
+
+-----------------------------------------------------------
+
+– Returns:
+  - the raw contents of the file or nil if an error occurs (including if the path describes a directory)
+*/
+func (gPath GPath) ReadFile() []byte {
+	if gPath.dir || !gPath.Exists() {
+		return nil
+	}
+
+	data, err := os.ReadFile(gPath.p)
+	if nil != err {
+		return nil
+	}
+
+	return data
 }
 
 /*
@@ -313,7 +334,7 @@ Create creates a path and any necessary subdirectories in case they don't exist 
 -----------------------------------------------------------
 
 – Params:
-  - also_file – if true, creates the file *too* if the path represents a file
+  - create_file – if true, creates the file *too* if the path represents a file
 
 – Returns:
   - nil if the path was created successfully, an error otherwise
