@@ -27,7 +27,7 @@ import (
 )
 
 /*
-GetPageHtmlTIMEDATE gets the HTML of a page.
+GetPageHtmlWEBPAGES gets the HTML of a page.
 
 -----------------------------------------------------------
 
@@ -37,7 +37,7 @@ GetPageHtmlTIMEDATE gets the HTML of a page.
 – Returns:
   - the HTML of the page or nil if an error occurs
 */
-func GetPageHtmlTIMEDATE(url string) *string {
+func GetPageHtmlWEBPAGES(url string) *string {
 	resp, err := http.Get(url)
 	if nil == err {
 		body, err := io.ReadAll(resp.Body)
