@@ -155,7 +155,7 @@ All the needed fields of the struct must be exported like with json.Marshal().
   - v – the data to convert to Json. Check the json.Marshal function for more info (used directly here).
 
 – Returns:
-  - true if the file was written successfully, false otherwise
+  - the JSON string, or nil if the data could not be converted
 */
 func ToJsonGENERAL(v any) *string {
 	json_data, err := json.Marshal(v)

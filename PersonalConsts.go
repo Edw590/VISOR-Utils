@@ -37,6 +37,9 @@ type _PersonalConstsEOG struct {
 	VISOR_EMAIL_PW string
 
 	USER_EMAIL_ADDR string
+
+	WEBSITE_URL string
+	WEBSITE_PW string
 }
 
 // PersonalConsts is a struct containing the constants that are personal to the user.
@@ -51,12 +54,17 @@ type PersonalConsts struct {
 
 	// USER_EMAIL_ADDR is the email address of the user, used for all email communication
 	USER_EMAIL_ADDR string
+
+	// WEBSITE_URL is the URL of the VISOR website
+	WEBSITE_URL string
+	// WEBSITE_PW is the password for the VISOR website
+	WEBSITE_PW string
 }
 
 /*
-init is the function that initializes the global variables of the PersonalConsts struct.
- */
-func (personalConsts *PersonalConsts) init() error {
+Init is the function that initializes the global variables of the PersonalConsts struct.
+*/
+func (personalConsts *PersonalConsts) Init() error {
 	const PERSONAL_CONSTS_FILE string = "PersonalConsts_EOG.json"
 
 	bytes, err := os.ReadFile(PERSONAL_CONSTS_FILE)
@@ -75,17 +83,20 @@ func (personalConsts *PersonalConsts) init() error {
 
 	// Set the global variables
 
-	// Ending _VISOR_DIR with a slash to be sure it's there (as it should - it's a directory)
-	personalConsts._VISOR_DIR = PathFILESDIRS("", struct_file_format.VISOR_DIR + "/")
+	personalConsts._VISOR_DIR = PathFILESDIRS(true, "", struct_file_format.VISOR_DIR)
 
 	personalConsts._VISOR_EMAIL_ADDR = struct_file_format.VISOR_EMAIL_ADDR
 	personalConsts._VISOR_EMAIL_PW = struct_file_format.VISOR_EMAIL_PW
 
 	personalConsts.USER_EMAIL_ADDR = struct_file_format.USER_EMAIL_ADDR
 
+	personalConsts.WEBSITE_PW = struct_file_format.WEBSITE_PW
+	personalConsts.WEBSITE_URL = struct_file_format.WEBSITE_URL + "/"
+
 	if !strings.Contains(personalConsts._VISOR_EMAIL_ADDR, "@") || personalConsts._VISOR_EMAIL_PW == "" ||
-				!strings.Contains(personalConsts.USER_EMAIL_ADDR, "@") {
-		return errors.New("Some fields in " + PERSONAL_CONSTS_FILE + " are empty! Aborting...")
+				!strings.Contains(personalConsts.USER_EMAIL_ADDR, "@") || personalConsts.WEBSITE_PW == "" ||
+				!strings.Contains(personalConsts.USER_EMAIL_ADDR, "http") {
+		return errors.New("Some fields in " + PERSONAL_CONSTS_FILE + " are empty or incorrect! Aborting...")
 	}
 
 	var visor_path GPath = personalConsts._VISOR_DIR

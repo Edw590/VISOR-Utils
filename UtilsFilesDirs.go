@@ -52,20 +52,16 @@ PathFILESDIRS combines a path from the given subpaths of type string or GPath (O
 
 Note: the path separators used are always converted to the OS ones.
 
-If you give the path to a directory to this function, make sure to ALWAYS end it with a path separator (important
-project convention). It's the only way to know if the path is a directory or not in case: there are no permissions to
-access it; it doesn't exist; it's a relative path. Else it's impossible to know if it's describing a directory or not.
-Various functions here depend on this convention in these listed cases!
-
 -----------------------------------------------------------
 
 – Params:
+  - separator – the path separator to use or "" for the OS default one
   - sub_paths – the subpaths to combine
 
 – Returns:
   - the final path as a GPath
 */
-func PathFILESDIRS(separator string, sub_paths ...any) GPath {
+func PathFILESDIRS(describes_dir bool, separator string, sub_paths ...any) GPath {
 	var sub_paths_str []string = nil
 	for _, sub_path := range sub_paths {
 		val_str, ok := sub_path.(string)
@@ -88,6 +84,13 @@ func PathFILESDIRS(separator string, sub_paths ...any) GPath {
 
 	if len(sub_paths_str) == 0 {
 		return GPath{}
+	}
+
+	if describes_dir {
+		// If the path describes a directory, make sure it ends with a path separator.
+		if !strings.HasSuffix(sub_paths_str[len(sub_paths_str)-1], separator) {
+			sub_paths_str[len(sub_paths_str)-1] += separator
+		}
 	}
 
 	// Replace all the path separators with the OS path separator.
@@ -140,26 +143,26 @@ Add adds subpaths to a path using the given path separator.
 -----------------------------------------------------------
 
 – Params:
-  - separator – the path separator to use
+  - separator – the path separator to use or 0xFF for the OS default one
   - sub_paths – the subpaths to add
 
 – Returns:
   - the final path as a GPath
 */
-func (gPath GPath) Add(separator rune, sub_paths ...any) GPath {
-	// Create a temporary slice with the first element + the subpaths, all in a 1D slice and all as the 1st parameter
-	// of the Path function.
+func (gPath GPath) Add(describes_dir bool, separator rune, sub_paths ...any) GPath {
+	// Create a temporary slice with the first element + the subpaths, all in a 1D slice and all as the 1st parameter of
+	// the Path function.
 	var tmp []any = append([]any{gPath}, sub_paths...)
 
 	var separator_tmp string = string(separator)
 	if 0xFF == separator {
 		separator_tmp = ""
 	}
-	return PathFILESDIRS(separator_tmp, tmp...)
+	return PathFILESDIRS(describes_dir, separator_tmp, tmp...)
 }
 
 /*
-Add2 is a wrapper of Add() using the default path separator.
+Add2 is a wrapper of Add() using the OS default path separator.
 
 -----------------------------------------------------------
 
@@ -169,8 +172,8 @@ Add2 is a wrapper of Add() using the default path separator.
 – Returns:
   - the final path as a GPath
  */
-func (gPath GPath) Add2(sub_paths ...any) GPath {
-	return gPath.Add(0xFF, sub_paths...)
+func (gPath GPath) Add2(describes_dir bool, sub_paths ...any) GPath {
+	return gPath.Add(describes_dir, 0xFF, sub_paths...)
 }
 
 /*
@@ -353,7 +356,8 @@ func (gPath GPath) Create(create_file bool) error {
 		path_list = path_list[:len(path_list) - 1]
 	}
 
-	if !PathFILESDIRS("", gPath.p[:FindAllIndexesGENERAL(gPath.p, gPath.s)[len(path_list) - 1] + 1]).Exists() {
+	// Create all parent directories if they don't exist.
+	if !PathFILESDIRS(true, "", gPath.p[:FindAllIndexesGENERAL(gPath.p, gPath.s)[len(path_list)-1]+1]).Exists() {
 		var current_path GPath = GPath{}
 		if strings.HasPrefix(gPath.p, gPath.s) {
 			current_path.p = gPath.s
@@ -440,13 +444,25 @@ func (gPath GPath) IsSupported() error {
 }
 
 /*
-GetBinDirMODULES gets the full path to the directory of the binaries.
+GetBinDirFILESDIRS gets the full path to the directory of the binaries.
 
 -----------------------------------------------------------
 
 – Returns:
   - the full path to the directory of the binaries
 */
-func GetBinDirMODULES() GPath {
-	return PersonalConsts_GL._VISOR_DIR.Add2(_BIN_REL_DIR)
+func GetBinDirFILESDIRS() GPath {
+	return PersonalConsts_GL._VISOR_DIR.Add2(true, _BIN_REL_DIR)
+}
+
+/*
+GetWebsiteFilesDirFILESDIRS gets the full path to the website files directory.
+
+-----------------------------------------------------------
+
+– Returns:
+  - the full path to the website files directory
+*/
+func GetWebsiteFilesDirFILESDIRS() GPath {
+	return PersonalConsts_GL._VISOR_DIR.Add2(true, _WEBSITE_FILES_REL_DIR)
 }

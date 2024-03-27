@@ -34,15 +34,17 @@ import (
 
 const (
 	// _BIN_REL_DIR is the relative path to the binaries' directory from PersonalConsts._VISOR_DIR.
-	_BIN_REL_DIR string = "bin/"
+	_BIN_REL_DIR string = "bin"
 	// _DATA_REL_DIR is the relative path to the data directory from PersonalConsts._VISOR_DIR.
-	_DATA_REL_DIR string = "data/"
+	_DATA_REL_DIR string = "data"
 	// _TEMP_FOLDER is the relative path to the temporary folder from PersonalConsts._VISOR_DIR.
-	_TEMP_FOLDER string = _DATA_REL_DIR + "Temp/"
+	_TEMP_FOLDER string = _DATA_REL_DIR + "Temp"
 	// _USER_DATA_REL_DIR is the relative path to the user data directory from PersonalConsts._VISOR_DIR.
-	_USER_DATA_REL_DIR string = _DATA_REL_DIR + "UserData/"
+	_USER_DATA_REL_DIR string = _DATA_REL_DIR + "UserData"
 	// _PROGRAM_DATA_REL_DIR is the relative path to the program data directory from PersonalConsts._VISOR_DIR.
-	_PROGRAM_DATA_REL_DIR string = _DATA_REL_DIR + "ProgramData/"
+	_PROGRAM_DATA_REL_DIR string = _DATA_REL_DIR + "ProgramData"
+	// _WEBSCRAPE_WEBSITE_FILES_REL_DIR is the relative path to the website files directory from PersonalConsts._VISOR_DIR.
+	_WEBSITE_FILES_REL_DIR string = _DATA_REL_DIR + "Website/files_EOG"
 )
 
 // _MOD_FOLDER_PREFFIX is the preffix of the modules' folders.
@@ -67,7 +69,7 @@ var MOD_NUMS_NAMES map[int]string = map[int]string{
 	2: "S.M.A.R.T. Checker",
 	4: "RSS Feed Notifier",
 	5: "Email Sender",
-	6: "Weather Checker",
+	6: "Online Information Checker",
 }
 
 const (
@@ -75,7 +77,7 @@ const (
 	NUM_MOD_SMARTChecker    int = 2
 	NUM_MOD_RssFeedNotifier int = 4
 	NUM_MOD_EmailSender     int = 5
-	NUM_MOD_WeatherChk      int = 6
+	NUM_MOD_OnlineInfoChk   int = 6
 
 	NUM_MODULES             int = 5
 )
@@ -161,7 +163,7 @@ func ModStartup[T any](mod_num int, realMain RealMain) {
 			printStartupSequenceMODULES(mod_name)
 
 			// Initialize the personal "constants"
-			err := PersonalConsts_GL.init()
+			err := PersonalConsts_GL.Init()
 			if err != nil {
 				fmt.Println("CRITICAL ERROR: " + GetFullErrorMsgGENERAL(err))
 				errs = true
@@ -255,7 +257,7 @@ module.
 func SendModErrorEmailMODULES(mod_num int, err_str string) error {
 	var things_replace map[string]string = map[string]string{
 		MODEL_INFO_MSG_BODY_EMAIL : err_str,
-		MODEL_INFO_DATE_TIME_EMAIL: GetDateTimeStrTIMEDATE(),
+		MODEL_INFO_DATE_TIME_EMAIL: GetDateTimeStrTIMEDATE(-1),
 	}
 	var email_info = GetModelFileEMAIL(MODEL_FILE_INFO, things_replace)
 	email_info.Subject = "Error in module: " + GetModNameMODULES(mod_num)
@@ -316,7 +318,7 @@ GetModUserInfo gets the information about the module from the user info file.
   - true if the file was read successfully, false otherwise
 */
 func (moduleInfo *ModuleInfo[T]) GetModUserInfo(v any) bool {
-	var p_json_file *string = moduleInfo.ModDirsInfo.UserData.Add2(_MOD_USER_INFO_JSON).ReadTextFile()
+	var p_json_file *string = moduleInfo.ModDirsInfo.UserData.Add2(false, _MOD_USER_INFO_JSON).ReadTextFile()
 	if p_json_file == nil {
 		return false
 	}
@@ -333,7 +335,7 @@ signalledToStop checks if the module was signalled to stop.
   - true if the module was signalled to stop, false otherwise
 */
 func (moduleInfo *ModuleInfo[T]) signalledToStop() bool {
-	var stop_file_path GPath = moduleInfo.ModDirsInfo.UserData.Add2("STOP")
+	var stop_file_path GPath = moduleInfo.ModDirsInfo.UserData.Add2(false, "STOP")
 	if stop_file_path.Exists() {
 		_ = stop_file_path.Remove()
 
@@ -357,8 +359,8 @@ Update updates the information about the module in its generated information fil
 func (modGenInfo *_ModGenInfo[T]) Update() error {
 	var json_str string = *ToJsonGENERAL(&modGenInfo)
 
-	var file_path_curr GPath = getUserDataDirMODULES(modGenInfo.Mod_num).Add2(_MOD_GEN_INFO_JSON)
-	var file_path_new GPath = getUserDataDirMODULES(modGenInfo.Mod_num).Add2(_MOD_GEN_INFO_JSON_TMP)
+	var file_path_curr GPath = getUserDataDirMODULES(modGenInfo.Mod_num).Add2(false, _MOD_GEN_INFO_JSON)
+	var file_path_new GPath = getUserDataDirMODULES(modGenInfo.Mod_num).Add2(false, _MOD_GEN_INFO_JSON_TMP)
 
 	var err error = file_path_new.WriteTextFile(json_str)
 	if nil != err {
@@ -374,10 +376,10 @@ getGenInfo gets the information about the module from its generated information 
 func (moduleInfo *ModuleInfo[T]) getGenInfo() {
 	// Get information from the existing mod_gen_info.json file
 	// Check first if the temporary file exists
-	var p_info []byte = moduleInfo.ModDirsInfo.UserData.Add2(_MOD_GEN_INFO_JSON_TMP).ReadFile()
+	var p_info []byte = moduleInfo.ModDirsInfo.UserData.Add2(false, _MOD_GEN_INFO_JSON_TMP).ReadFile()
 	if nil == p_info {
 		// If not, check if the main file exists
-		p_info = moduleInfo.ModDirsInfo.UserData.Add2(_MOD_GEN_INFO_JSON).ReadFile()
+		p_info = moduleInfo.ModDirsInfo.UserData.Add2(false, _MOD_GEN_INFO_JSON).ReadFile()
 		if nil == p_info {
 			// If not, empty struct (new file)
 
@@ -439,7 +441,7 @@ getProgramDataDirMODULES gets the full path to the program data directory of a m
   - the full path to the program data directory of the module
 */
 func getProgramDataDirMODULES(mod_num int) GPath {
-	return PersonalConsts_GL._VISOR_DIR.Add2(_PROGRAM_DATA_REL_DIR, _MOD_FOLDER_PREFFIX+strconv.Itoa(mod_num)+"/")
+	return PersonalConsts_GL._VISOR_DIR.Add2(true, _PROGRAM_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num))
 }
 
 /*
@@ -454,7 +456,7 @@ getUserDataDirMODULES gets the full path to the private user data directory of a
   - the full path to the private data directory of the module
 */
 func getUserDataDirMODULES(mod_num int) GPath {
-	return PersonalConsts_GL._VISOR_DIR.Add2(_USER_DATA_REL_DIR, _MOD_FOLDER_PREFFIX+strconv.Itoa(mod_num)+"/")
+	return PersonalConsts_GL._VISOR_DIR.Add2(true, _USER_DATA_REL_DIR, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num))
 }
 
 /*
@@ -469,7 +471,7 @@ getModTempDirMODULES gets the full path to the private temporary directory of a 
   - the full path to the private temporary directory of the module
 */
 func getModTempDirMODULES(mod_num int) GPath {
-	return PersonalConsts_GL._VISOR_DIR.Add2(_TEMP_FOLDER, _MOD_FOLDER_PREFFIX+strconv.Itoa(mod_num)+"/")
+	return PersonalConsts_GL._VISOR_DIR.Add2(true, _TEMP_FOLDER, _MOD_FOLDER_PREFFIX + strconv.Itoa(mod_num))
 }
 
 /*
@@ -488,7 +490,7 @@ func (moduleInfo *ModuleInfo[T]) updateModRunInfo() GPath {
 	// Remove all the old info files
 	for _, file := range files {
 		if strings.HasPrefix(file.Name(), "PID=") {
-			err := moduleInfo.ModDirsInfo.UserData.Add2(file.Name()).Remove()
+			err := moduleInfo.ModDirsInfo.UserData.Add2(false, file.Name()).Remove()
 			if nil != err {
 				panic(err)
 			}
@@ -498,8 +500,8 @@ func (moduleInfo *ModuleInfo[T]) updateModRunInfo() GPath {
 	var curr_pid int = os.Getpid()
 	var curr_ts_ns int64 = time.Now().UnixNano()
 
-	var new_info_file GPath = getUserDataDirMODULES(mod_num).Add2("PID=" + strconv.Itoa(curr_pid) +
-				"_TS=" + strconv.FormatInt(curr_ts_ns, 10))
+	var new_info_file GPath = getUserDataDirMODULES(mod_num).Add2(false, "PID="+strconv.Itoa(curr_pid)+
+				"_TS="+strconv.FormatInt(curr_ts_ns, 10))
 	_ = new_info_file.Create(true)
 
 	moduleInfo.ModGenInfo.ModRunInfo.Last_pid = curr_pid
@@ -530,7 +532,7 @@ func IsModRunningMODULES(mod_num int) bool {
 
 	for _, file := range files {
 		if strings.HasPrefix(file.Name(), "PID=") {
-			var file_path GPath = getUserDataDirMODULES(mod_num).Add2(file.Name())
+			var file_path GPath = getUserDataDirMODULES(mod_num).Add2(false, file.Name())
 
 			var info_list []string = strings.Split(file.Name(), "_")
 			var pid_str string = strings.TrimPrefix(info_list[0], "PID=")
@@ -560,7 +562,7 @@ func IsModRunningMODULES(mod_num int) bool {
 }
 
 func ModSignalStopMODULES(mod_num int) bool {
-	return nil == getUserDataDirMODULES(mod_num).Add2("STOP").Create(true)
+	return nil == getUserDataDirMODULES(mod_num).Add2(false, "STOP").Create(true)
 }
 
 /*
@@ -584,7 +586,7 @@ func IsModSupportedMODULES(mod_num int) bool {
 			return isMOD4Supported()
 		case NUM_MOD_EmailSender:
 			return isMOD5Supported()
-		case NUM_MOD_WeatherChk:
+		case NUM_MOD_OnlineInfoChk:
 			return isMOD6Supported()
 	}
 

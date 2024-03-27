@@ -89,8 +89,8 @@ const (
 
 const RAND_STR_LEN int = 10
 
-const TO_SEND_REL_FOLDER string = "to_send/"
-const _EMAIL_MODELS_FOLDER string = "email_models/"
+const TO_SEND_REL_FOLDER string = "to_send"
+const _EMAIL_MODELS_FOLDER string = "email_models"
 
 const _TEMP_EML_FILE string = "msg_temp.eml"
 
@@ -124,7 +124,8 @@ func GetModelFileEMAIL(file_name string, things_replace map[string]string) Email
 			sender = "VISOR - S.M.A.R.T."
 	}
 
-	var msg_html string = *getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, file_name).ReadTextFile()
+	var msg_html string = *getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(false, _EMAIL_MODELS_FOLDER, file_name).
+		ReadTextFile()
 	for key, value := range things_replace {
 		msg_html = strings.ReplaceAll(msg_html, key, value)
 	}
@@ -164,16 +165,16 @@ func QueueEmailEMAIL(emailInfo EmailInfo) error {
 	}
 
 	var file_name string = ""
-	var to_send_dir GPath = getUserDataDirMODULES(NUM_MOD_EmailSender).Add2(TO_SEND_REL_FOLDER)
+	var to_send_dir GPath = getUserDataDirMODULES(NUM_MOD_EmailSender).Add2(true, TO_SEND_REL_FOLDER)
 	for {
 		var rand_string string = RandStringGENERAL(RAND_STR_LEN)
-		_, err := os.ReadFile(to_send_dir.Add2(rand_string + emailInfo.Mail_to + ".eml").
+		_, err := os.ReadFile(to_send_dir.Add2(false, rand_string + emailInfo.Mail_to + ".eml").
 			GPathToStringConversion())
 		if nil != err {
 			// If the file doesn't exist, choose that name.
 			file_name = rand_string + emailInfo.Mail_to + ".eml"
 
-			return getUserDataDirMODULES(NUM_MOD_EmailSender).Add2(TO_SEND_REL_FOLDER + file_name).
+			return getUserDataDirMODULES(NUM_MOD_EmailSender).Add2(false, TO_SEND_REL_FOLDER + file_name).
 				WriteTextFile(message_eml)
 		}
 	}
@@ -196,7 +197,7 @@ SendEmailEMAIL sends an email with the given message and receiver.
   - nil if the email was sent successfully, otherwise an error
 */
 func SendEmailEMAIL(message_eml string, mail_to string, emergency_email bool) error {
-	if err := getModTempDirMODULES(NUM_MOD_EmailSender).Add2(_TEMP_EML_FILE).WriteTextFile(message_eml); nil != err {
+	if err := getModTempDirMODULES(NUM_MOD_EmailSender).Add2(false, _TEMP_EML_FILE).WriteTextFile(message_eml); nil != err {
 		return err
 	}
 	_, err := ExecCmdSHELL([]string{getCurlStringEMAIL(mail_to, emergency_email)})
@@ -246,7 +247,8 @@ prepareEmlEMAIL prepares the EML file of the email.
   - nil if the email was queued successfully, otherwise an error
 */
 func prepareEmlEMAIL(emailInfo EmailInfo) (string, string, bool) {
-	var p_message_eml *string = getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(_EMAIL_MODELS_FOLDER, _MODEL_FILE_MESSAGE_EML).ReadTextFile()
+	var p_message_eml *string = getProgramDataDirMODULES(NUM_MOD_EmailSender).Add2(false, _EMAIL_MODELS_FOLDER,
+		_MODEL_FILE_MESSAGE_EML).ReadTextFile()
 	if p_message_eml == nil {
 		return "", "", false
 	}
@@ -306,6 +308,6 @@ func getCurlStringEMAIL(mail_to string, emergency_email bool) string {
 
 	return "curl{{EXE}} --location --connect-timeout " + timeout + " --verbose \"smtp://smtp.gmail.com:587\" --user \"" +
 		PersonalConsts_GL._VISOR_EMAIL_ADDR + ":" + PersonalConsts_GL._VISOR_EMAIL_PW + "\" --mail-rcpt \"" + mail_to +
-		"\" --upload-file \"" + getModTempDirMODULES(NUM_MOD_EmailSender).Add2(_TEMP_EML_FILE).GPathToStringConversion() +
+		"\" --upload-file \"" + getModTempDirMODULES(NUM_MOD_EmailSender).Add2(false, _TEMP_EML_FILE).GPathToStringConversion() +
 		"\" --ssl-reqd"
 }
