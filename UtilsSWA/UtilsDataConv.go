@@ -50,7 +50,7 @@ func BytesToPrintableDATACONV(byte_array []byte, utf7_flag bool) string {
 	}
 }
 
-const HEX_ARRAY string = "0123456789ABCDEF";
+const _HEX_ARRAY string = "0123456789ABCDEF";
 /*
 BytesToHexDATACONV converts the given byte array into a string of the type "XX XX XX", in which the Xs are hexadecimal digits.
 
@@ -70,15 +70,15 @@ func BytesToHexDATACONV(bytes []byte) string {
 	var hex_chars string = ""
 	for i := 0; i < bytes_length; i++ {
 		var positive_byte uint = uint(bytes[i]) & 0xFF // See why it works on byteToIntUnsigned()
-		hex_chars += string(HEX_ARRAY[positive_byte >> 4])
-		hex_chars += string(HEX_ARRAY[positive_byte & 0x0F])
+		hex_chars += string(_HEX_ARRAY[positive_byte >> 4])
+		hex_chars += string(_HEX_ARRAY[positive_byte & 0x0F])
 		hex_chars += " "
 	}
 
 	return hex_chars[:len(hex_chars) - 1]
 }
 
-const OCT_ARRAY string = "01234567";
+const _OCT_ARRAY string = "01234567";
 /*
 BytesToOctalDATACONV converts the given byte array into a string of the type "XXX XXX XXX", in which the Xs are octal digits.
 
@@ -98,9 +98,9 @@ func BytesToOctalDATACONV(bytes []byte) string {
 	var hex_chars string = ""
 	for i := 0; i < bytes_length; i++ {
 		var positive_byte uint = uint(bytes[i]) & 0xFF // See why it works on byteToIntUnsigned()
-		hex_chars += string(OCT_ARRAY[(positive_byte & 0b11000000) >> 6])
-		hex_chars += string(OCT_ARRAY[(positive_byte & 0b00111000 >> 3)])
-		hex_chars += string(OCT_ARRAY[positive_byte & 0b00000111])
+		hex_chars += string(_OCT_ARRAY[(positive_byte & 0b11000000) >> 6])
+		hex_chars += string(_OCT_ARRAY[(positive_byte & 0b00111000 >> 3)])
+		hex_chars += string(_OCT_ARRAY[positive_byte & 0b00000111])
 		hex_chars += " "
 	}
 
