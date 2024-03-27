@@ -31,7 +31,7 @@ import (
 
 const GENERIC_ERR int = -230984
 
-// CmdOutput is a struct containing the stdout and stderr of a command.
+// CmdOutput is a struct containing the exit code, stdout and stderr of a command.
 type CmdOutput struct {
 	// Stdout_str is the stdout of the command as a string, with all line breaks replaced by \n.
 	Stdout_str string
@@ -48,7 +48,7 @@ type CmdOutput struct {
 /*
 ExecCmdSHELL executes a list of commands in a shell and returns the stdout and stderr.
 
-On Windows, the command is executed in powershell.exe; on Linux, it's executed in sh. All elements of the list are
+On Windows, the command is executed in powershell.exe; on Linux, it's executed in bash. All elements of the list are
 joined using "\n" as the command separator, given to the shell.
 
 ATTENTION: to call any program, add "{{EXE}}" right after the program name in the command string. This will be replaced
@@ -58,7 +58,7 @@ PowerShell but the actual program in Linux, for example - but curl.exe calls the
 -----------------------------------------------------------
 
 – Params:
-  - command – the command to execute
+  - commands_list – the commands to execute
 
 – Returns:
   - the CmdOutput struct containing the stdout, stderr and error code of the command. Note that their string versions
@@ -78,9 +78,9 @@ ExecCmdSHELL for more information.
 -----------------------------------------------------------
 
 – Params:
-  - command – the command to execute
+  - commands_list – the commansd to execute
   - windows_shell – the Windows shell, or "" to use the default (powershell.exe)
-  - linux_shell – the Linux shell, or "" to use the default (sh)
+  - linux_shell – the Linux shell, or "" to use the default (bash)
 
 – Returns:
   - the CmdOutput struct containing the stdout, stderr and error code of the command. Note that their string versions
@@ -90,7 +90,7 @@ func ExecCmdMainSHELL(commands_list[] string, windows_shell string, linux_shell 
 		windows_shell = "powershell.exe"
 	}
 	if linux_shell == "" {
-		linux_shell = "sh"
+		linux_shell = "bash"
 	}
 	var shell string = ""
 	if "windows" == runtime.GOOS {
