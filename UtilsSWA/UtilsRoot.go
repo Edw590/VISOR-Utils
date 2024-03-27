@@ -43,7 +43,7 @@ func IsRootAvailable() bool {
 	// because denied, or no because not rooted.
 
 	// Keep attempt_su false and input the whole command or infinite recursion will pay a visit.
-	cmd_output, err := ExecCmdSHELL("su -c id", false)
+	cmd_output, err := ExecCmdSHELL(false, "su -c id")
 	if err != nil {
 		return false
 	}
