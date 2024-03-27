@@ -37,20 +37,8 @@ GetDateTimeStrTIMEDATE gets the current time and date in the format DATE_TIME_FO
 – Returns:
   - the current time and date in the default format
 */
-func GetDateTimeStrTIMEDATE() string {
-	return time.Now().Format(DATE_TIME_FORMAT)
-}
-
-/*
-GetTimeStrTIMEDATE gets the current time in the format TIME_FORMAT.
-
------------------------------------------------------------
-
-– Returns:
-  - the current time in the default format
-*/
-func GetDateStrTIMEDATE() string {
-	return time.Now().Format(DATE_FORMAT)
+func GetDateTimeStrTIMEDATE(millis int64) string {
+	return getTimeDateInFormat(millis, DATE_TIME_FORMAT)
 }
 
 /*
@@ -59,8 +47,40 @@ GetDateStrTIMEDATE gets the current date in the format DATE_FORMAT.
 -----------------------------------------------------------
 
 – Returns:
+  - the current time in the default format
+*/
+func GetDateStrTIMEDATE(millis int64) string {
+	return getTimeDateInFormat(millis, DATE_FORMAT)
+}
+
+/*
+GetTimeStrTIMEDATE gets the current time in the format TIME_FORMAT.
+
+-----------------------------------------------------------
+
+– Returns:
   - the current date in the default format
 */
-func GetTimeStrTIMEDATE() string {
-	return time.Now().Format(TIME_FORMAT)
+func GetTimeStrTIMEDATE(millis int64) string {
+	return getTimeDateInFormat(millis, TIME_FORMAT)
+}
+
+/*
+getTimeDateInFormat gets the time and/or date in the given format.
+
+-----------------------------------------------------------
+
+– Params:
+  - millis – the time in milliseconds
+  - format – the format to use
+
+– Returns:
+  - the time and/or date in the given format
+ */
+func getTimeDateInFormat(millis int64, format string) string {
+	if millis != -1 {
+		return time.Unix(0, millis*1e6).Format(format)
+	} else {
+		return time.Now().Format(format)
+	}
 }
